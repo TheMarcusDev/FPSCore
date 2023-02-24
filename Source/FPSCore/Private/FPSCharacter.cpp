@@ -27,26 +27,26 @@
 // Sets default values
 AFPSCharacter::AFPSCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-    
+    // Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = true;
+
     // Spawning the spring arm component
     SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
     SpringArmComponent->bUsePawnControlRotation = true;
     SpringArmComponent->SetupAttachment(RootComponent);
-    
+
     // Spawning the FPS hands mesh component and attaching it to the spring arm component
     HandsMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
     HandsMeshComp->CastShadow = false;
     HandsMeshComp->AttachToComponent(SpringArmComponent, FAttachmentTransformRules::KeepRelativeTransform);
-    
+
     // Spawning the camera atop the FPS hands mesh
     CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
     if (HandsMeshComp)
     {
         CameraComponent->AttachToComponent(HandsMeshComp, FAttachmentTransformRules::KeepRelativeTransform, "CameraSocket");
     }
-    
+
     DefaultCapsuleHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight(); // setting the default height of the capsule
 }
 
@@ -55,15 +55,15 @@ void AFPSCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (MovementDataMap.Contains(EMovementState::State_Walk))
+    if (MovementDataMap.Contains(EMovementState::State_Sprint))
     {
-        GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed;
+        GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[EMovementState::State_Sprint].MaxWalkSpeed;
     }
     else
     {
         UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap!"))
     }
-    
+
     DefaultSpringArmOffset = SpringArmComponent->GetRelativeLocation().Z; // Setting the default location of the spring arm
 
     // Binding a timeline to our vaulting curve
@@ -75,7 +75,7 @@ void AFPSCharacter::BeginPlay()
     }
 
     // Obtaining our inventory component and reserving space in memory for our set of weapons
-    if (UInventoryComponent* InventoryComp = FindComponentByClass<UInventoryComponent>())
+    if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
     {
         InventoryComponent = InventoryComp;
         InventoryComponent->GetEquippedWeapons().Reserve(InventoryComponent->GetNumberOfWeaponSlots());
@@ -90,10 +90,10 @@ void AFPSCharacter::PawnClientRestart()
     Super::PawnClientRestart();
 
     // Make sure that we have a valid PlayerController.
-    if (const AFPSCharacterController* PlayerController = Cast<AFPSCharacterController>(GetController()))
+    if (const AFPSCharacterController *PlayerController = Cast<AFPSCharacterController>(GetController()))
     {
         // Get the Enhanced Input Local Player Subsystem from the Local Player related to our Player Controller.
-        if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+        if (UEnhancedInputLocalPlayerSubsystem *Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
         {
             // PawnClientRestart can run more than once in an Actor's lifetime, so start by clearing out any leftover mappings.
             Subsystem->ClearAllMappings();
@@ -104,8 +104,7 @@ void AFPSCharacter::PawnClientRestart()
     }
 }
 
-
-void AFPSCharacter::Move(const FInputActionValue& Value)
+void AFPSCharacter::Move(const FInputActionValue &Value)
 {
     // Storing movement vectors for animation manipulation
     ForwardMovement = Value[1];
@@ -119,7 +118,7 @@ void AFPSCharacter::Move(const FInputActionValue& Value)
     }
 }
 
-void AFPSCharacter::Look(const FInputActionValue& Value)
+void AFPSCharacter::Look(const FInputActionValue &Value)
 {
     // Storing look vectors for animation manipulation
     MouseX = Value[1];
@@ -128,7 +127,7 @@ void AFPSCharacter::Look(const FInputActionValue& Value)
     // Looking around
     AddControllerPitchInput(Value[1] * -1);
     AddControllerYawInput(Value[0]);
-    
+
     if (InventoryComponent)
     {
         if (Value.GetMagnitude() != 0.0f && InventoryComponent->GetCurrentWeapon())
@@ -156,10 +155,10 @@ void AFPSCharacter::ToggleCrouch()
         else
         {
             UpdateMovementState(EMovementState::State_Crouch);
-            if (bWantsToSprint)
-            {
-                bWantsToSprint = false;
-            }
+            // if (bWantsToSprint)
+            // {
+            //     bWantsToSprint = false;
+            // }
         }
     }
     else if (!bPerformedSlide)
@@ -179,19 +178,19 @@ void AFPSCharacter::ReleaseCrouch()
     }
     else if (!bCrouchIsToggle)
     {
-        if (MovementState == EMovementState::State_Sprint)
+        if (MovementState == EMovementState::State_Walk)
         {
             return;
         }
-        UpdateMovementState(EMovementState::State_Walk);
+        UpdateMovementState(EMovementState::State_Sprint);
     }
 }
 
-void AFPSCharacter::StopCrouch(const bool bToSprint)
+void AFPSCharacter::StopCrouch(const bool bToWalk)
 {
     if ((MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide) && HasSpaceToStandUp())
     {
-        if (bToSprint)
+        if (!bToWalk)
         {
             UpdateMovementState(EMovementState::State_Sprint);
         }
@@ -202,29 +201,28 @@ void AFPSCharacter::StopCrouch(const bool bToSprint)
     }
 }
 
-void AFPSCharacter::StartSprint()
+void AFPSCharacter::StartWalk()
 {
-    if (!HasSpaceToStandUp() && (MovementState == EMovementState::State_Crouch || MovementState ==
-        EMovementState::State_Slide))
+    if (!HasSpaceToStandUp())
     {
         return;
     }
     bPerformedSlide = false;
-    UpdateMovementState(EMovementState::State_Sprint);
-    bWantsToSprint = true;
+    UpdateMovementState(EMovementState::State_Walk);
+    bWantsToWalk = true;
 }
 
-void AFPSCharacter::StopSprint()
+void AFPSCharacter::StopWalk()
 {
-    if (MovementState == EMovementState::State_Slide && bHoldingCrouch)
+    if (bHoldingCrouch)
     {
         UpdateMovementState(EMovementState::State_Crouch);
     }
-    else if (MovementState == EMovementState::State_Sprint)
+    else if (MovementState == EMovementState::State_Walk)
     {
-        UpdateMovementState(EMovementState::State_Walk);
+        UpdateMovementState(EMovementState::State_Sprint);
     }
-    bWantsToSprint = false;
+    bWantsToWalk = false;
 }
 
 void AFPSCharacter::StartSlide()
@@ -242,7 +240,7 @@ void AFPSCharacter::StopSlide()
         {
             UpdateMovementState(EMovementState::State_Crouch);
         }
-        else if (bWantsToSprint)
+        else if (bWantsToWalk)
         {
             StopCrouch(true);
         }
@@ -252,7 +250,7 @@ void AFPSCharacter::StopSlide()
         }
         else
         {
-            UpdateMovementState(EMovementState::State_Walk);
+            UpdateMovementState(EMovementState::State_Sprint);
         }
         bPerformedSlide = false;
         GetWorldTimerManager().ClearTimer(SlideStop);
@@ -275,10 +273,12 @@ void AFPSCharacter::StopAds()
 
 void AFPSCharacter::CheckVault()
 {
-    if (!bCanVault) return;
-    
+    if (!bCanVault)
+        return;
+
     float ForwardVelocity = FVector::DotProduct(GetVelocity(), GetActorForwardVector());
-    if (!(ForwardVelocity > 0 && !bIsVaulting && GetCharacterMovement()->IsFalling())) return;
+    if (!(ForwardVelocity > 0 && !bIsVaulting && GetCharacterMovement()->IsFalling()))
+        return;
 
     // Store these for future use.
     FVector ColliderLocation = GetCapsuleComponent()->GetComponentLocation();
@@ -295,10 +295,11 @@ void AFPSCharacter::CheckVault()
     TraceParams.AddIgnoredActor(this);
 
     // Checking if we are near a wall
-    if (!GetWorld()->SweepSingleByChannel(MantleHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic,
-                                          FCollisionShape::MakeCapsule(30, 50), TraceParams)) return;
-    if (!MantleHit.bBlockingHit) return;
-    
+    if (!GetWorld()->SweepSingleByChannel(MantleHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeCapsule(30, 50), TraceParams))
+        return;
+    if (!MantleHit.bBlockingHit)
+        return;
+
     FVector ForwardImpactPoint = MantleHit.ImpactPoint;
     FVector ForwardImpactNormal = MantleHit.ImpactNormal;
     FVector CapsuleLocation = ForwardImpactPoint;
@@ -309,9 +310,11 @@ void AFPSCharacter::CheckVault()
     EndLocation = CapsuleLocation;
 
     // Checking if we can stand up on the wall that we've hit
-    if (!GetWorld()->SweepSingleByChannel(MantleHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(1), TraceParams)) return;
-    if (!GetCharacterMovement()->IsWalkable(MantleHit)) return;
-    
+    if (!GetWorld()->SweepSingleByChannel(MantleHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(1), TraceParams))
+        return;
+    if (!GetCharacterMovement()->IsWalkable(MantleHit))
+        return;
+
     FVector SecondaryVaultStartLocation = MantleHit.ImpactPoint;
     SecondaryVaultStartLocation.Z += 5;
     FVector SecondaryVaultEndLocation = SecondaryVaultStartLocation;
@@ -343,19 +346,20 @@ void AFPSCharacter::CheckVault()
         SecondaryVaultEndLocation += ForwardAddition;
         SecondaryVaultHeightCheckLocation += ForwardAddition;
         bVaultFailed = true;
-        if (!GetWorld()->LineTraceSingleByChannel(VaultHit, SecondaryVaultStartLocation, SecondaryVaultEndLocation, ECC_WorldStatic, TraceParams)) continue;
+        if (!GetWorld()->LineTraceSingleByChannel(VaultHit, SecondaryVaultStartLocation, SecondaryVaultEndLocation, ECC_WorldStatic, TraceParams))
+            continue;
         if (bDrawDebug)
         {
             DrawDebugLine(GetWorld(), SecondaryVaultStartLocation, VaultHit.ImpactPoint, FColor::Red, false, 10.0f, 0.0f, 2.0f);
         }
 
-        
         if (bDrawDebug)
         {
             DrawDebugLine(GetWorld(), SecondaryVaultStartLocation, SecondaryVaultHeightCheckLocation, FColor::Green, false, 10.0f, 0.0f, 2.0f);
         }
-        if (GetWorld()->LineTraceSingleByChannel(VaultHeightHit, SecondaryVaultStartLocation, SecondaryVaultHeightCheckLocation, ECC_WorldStatic, TraceParams)) break;
-        
+        if (GetWorld()->LineTraceSingleByChannel(VaultHeightHit, SecondaryVaultStartLocation, SecondaryVaultHeightCheckLocation, ECC_WorldStatic, TraceParams))
+            break;
+
         float TraceLength = SecondaryVaultStartLocation.Z - VaultHit.ImpactPoint.Z;
         if (!bInitialSwitch)
         {
@@ -365,13 +369,15 @@ void AFPSCharacter::CheckVault()
 
         PreviousTraceHeight = CurrentTraceHeight;
         CurrentTraceHeight = TraceLength;
-        if (!(!(FMath::IsNearlyEqual(CurrentTraceHeight, InitialTraceHeight, 20.0f)) && CurrentTraceHeight < MaxMantleHeight)) continue;
+        if (!(!(FMath::IsNearlyEqual(CurrentTraceHeight, InitialTraceHeight, 20.0f)) && CurrentTraceHeight < MaxMantleHeight))
+            continue;
 
-        if (!FMath::IsNearlyEqual(PreviousTraceHeight, CurrentTraceHeight, 3.0f)) continue;
+        if (!FMath::IsNearlyEqual(PreviousTraceHeight, CurrentTraceHeight, 3.0f))
+            continue;
 
         FVector DownTracePoint = VaultHit.Location;
         DownTracePoint.Z = VaultHit.ImpactPoint.Z;
- 
+
         FVector CalculationVector = FVector::ZeroVector;
         CalculationVector.Z = CalculationHeight;
         DownTracePoint += CalculationVector;
@@ -382,9 +388,10 @@ void AFPSCharacter::CheckVault()
 
         if (bDrawDebug)
         {
-           DrawDebugCapsule(GetWorld(), StartLocation, GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), GetCapsuleComponent()->GetUnscaledCapsuleRadius(), FQuat::Identity , FColor::Green, false, 10.0f);
+            DrawDebugCapsule(GetWorld(), StartLocation, GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), GetCapsuleComponent()->GetUnscaledCapsuleRadius(), FQuat::Identity, FColor::Green, false, 10.0f);
         }
-        if (GetWorld()->SweepSingleByChannel(VaultHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(GetCapsuleComponent()->GetUnscaledCapsuleRadius()), TraceParams)) continue;
+        if (GetWorld()->SweepSingleByChannel(VaultHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(GetCapsuleComponent()->GetUnscaledCapsuleRadius()), TraceParams))
+            continue;
 
         // If we find such a location, break the loop and vault
         ForwardImpactNormal.X -= 1;
@@ -396,13 +403,14 @@ void AFPSCharacter::CheckVault()
         break;
     }
 
-    if (!bVaultFailed) return;
+    if (!bVaultFailed)
+        return;
 
     // If the vault has failed (there is no space or the surface is too high), we proceed to perform the mantle logic
-    
+
     FVector DownTracePoint = MantleHit.Location;
     DownTracePoint.Z = MantleHit.ImpactPoint.Z;
- 
+
     FVector CalculationVector = FVector::ZeroVector;
     CalculationVector.Z = GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 2;
     DownTracePoint += CalculationVector;
@@ -412,9 +420,10 @@ void AFPSCharacter::CheckVault()
     EndLocation.Z -= GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere();
 
     // Looking for a safe place to mantle to
-     if (GetWorld()->SweepSingleByChannel(MantleHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic,
+    if (GetWorld()->SweepSingleByChannel(MantleHit, StartLocation, EndLocation, FQuat::Identity, ECC_WorldStatic,
                                          FCollisionShape::MakeSphere(GetCapsuleComponent()->GetUnscaledCapsuleRadius()),
-                                         TraceParams)) return;
+                                         TraceParams))
+        return;
 
     ForwardImpactNormal.X -= 1;
     ForwardImpactNormal.Y -= 1;
@@ -433,7 +442,7 @@ void AFPSCharacter::TimelineProgress(const float Value)
     if (Value == 1)
     {
         bIsVaulting = false;
-        if (bWantsToSprint)
+        if (!bWantsToWalk)
         {
             UpdateMovementState(EMovementState::State_Sprint);
         }
@@ -459,8 +468,7 @@ void AFPSCharacter::CheckGroundAngle(float DeltaTime)
         FloorAngle = FinalRotation.Pitch;
         if (bDrawDebug)
         {
-            GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red,
-                                             FString::Printf(TEXT("Current floor angle = %f"), FloorAngle), true);
+            GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Current floor angle = %f"), FloorAngle), true);
         }
     }
 }
@@ -473,9 +481,9 @@ float AFPSCharacter::CheckRelativeMovementAngle(const float DeltaTime) const
 
     if (bDrawDebug)
     {
-        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Orange, FString::SanitizeFloat(FMath::Abs(RelativeMovementVector.HeadingAngle() * (180/PI))));    
+        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Orange, FString::SanitizeFloat(FMath::Abs(RelativeMovementVector.HeadingAngle() * (180 / PI))));
     }
-    
+
     return FMath::Abs(RelativeMovementVector.HeadingAngle());
 }
 
@@ -496,7 +504,7 @@ bool AFPSCharacter::HasSpaceToStandUp()
 
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
-    
+
     if (GetWorld()->SweepSingleByChannel(StandUpHit, CenterVector, CenterVector, FQuat::Identity, ECC_WorldStatic, CollisionCapsule, QueryParams))
     {
         /* confetti or smth idk */
@@ -529,6 +537,7 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
     // Clearing sprinting and crouching flags
     bIsSprinting = false;
     bIsCrouching = false;
+    bIsWalking = false;
 
     // Updating the movement state
     MovementState = NewMovementState;
@@ -563,26 +572,30 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
     {
         bIsSprinting = true;
     }
+    if (MovementState == EMovementState::State_Walk)
+    {
+        bIsWalking = true;
+    }
 }
 
 // Called every frame
 void AFPSCharacter::Tick(const float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+    Super::Tick(DeltaTime);
 
     // Timeline tick
     VaultTimeline.TickTimeline(DeltaTime);
 
-	// Crouching
-	// Sets the new Target Half Height based on whether the player is crouching or standing
-	const float TargetHalfHeight = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide)? CrouchedCapsuleHalfHeight : DefaultCapsuleHalfHeight;
-    const float SpringArmTargetOffset = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide)? DefaultSpringArmOffset + CrouchedSpringArmHeightDelta : DefaultSpringArmOffset;
+    // Crouching
+    // Sets the new Target Half Height based on whether the player is crouching or standing
+    const float TargetHalfHeight = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide) ? CrouchedCapsuleHalfHeight : DefaultCapsuleHalfHeight;
+    const float SpringArmTargetOffset = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide) ? DefaultSpringArmOffset + CrouchedSpringArmHeightDelta : DefaultSpringArmOffset;
     // Interpolates between the current height and the target height
-	const float NewHalfHeight = FMath::FInterpTo(GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), TargetHalfHeight, DeltaTime, CrouchSpeed);
+    const float NewHalfHeight = FMath::FInterpTo(GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), TargetHalfHeight, DeltaTime, CrouchSpeed);
     const float NewLocation = FMath::FInterpTo(CurrentSpringArmOffset, SpringArmTargetOffset, DeltaTime, CrouchSpeed);
     CurrentSpringArmOffset = NewLocation;
-	// Sets the half height of the capsule component to the new interpolated half height
-	GetCapsuleComponent()->SetCapsuleHalfHeight(NewHalfHeight);
+    // Sets the half height of the capsule component to the new interpolated half height
+    GetCapsuleComponent()->SetCapsuleHalfHeight(NewHalfHeight);
     FVector NewSpringArmLocation = SpringArmComponent->GetRelativeLocation();
     NewSpringArmLocation.Z = NewLocation;
     SpringArmComponent->SetRelativeLocation(NewSpringArmLocation);
@@ -590,25 +603,24 @@ void AFPSCharacter::Tick(const float DeltaTime)
     if (bRestrictSprintAngle)
     {
         const float CurrentRelativeMovementAngle = CheckRelativeMovementAngle(DeltaTime);
-        
+
         // Sprinting
-        if (CurrentRelativeMovementAngle > (SprintAngleLimit * (PI/180)) && MovementState == EMovementState::State_Sprint)
+        if (CurrentRelativeMovementAngle > (SprintAngleLimit * (PI / 180)) && MovementState == EMovementState::State_Sprint)
         {
             UpdateMovementState(EMovementState::State_Walk);
             bRestrictingSprint = true;
         }
-        else if (CurrentRelativeMovementAngle < (SprintAngleLimit * (PI/180)) && bRestrictingSprint && bWantsToSprint && MovementState != EMovementState::State_Sprint)
+        else if (CurrentRelativeMovementAngle < (SprintAngleLimit * (PI / 180)) && bRestrictingSprint && !bWantsToWalk)
         {
             UpdateMovementState(EMovementState::State_Sprint);
             bRestrictingSprint = false;
         }
     }
-    
-    
+
     // FOV adjustments
     if (MovementDataMap.Contains(EMovementState::State_Walk))
     {
-        float TargetFOV = ((MovementState == EMovementState::State_Sprint || MovementState == EMovementState::State_Slide) && GetVelocity().Size() > MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed)? BaseFOV + FOVOffset + SpeedFOVChange : BaseFOV + FOVOffset;
+        float TargetFOV = ((MovementState == EMovementState::State_Sprint || MovementState == EMovementState::State_Slide) && GetVelocity().Size() > MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed) ? BaseFOV + FOVOffset + SpeedFOVChange : BaseFOV + FOVOffset;
         if (InventoryComponent)
         {
             if (InventoryComponent->GetCurrentWeapon())
@@ -619,8 +631,8 @@ void AFPSCharacter::Tick(const float DeltaTime)
                 }
             }
         }
-        
-        //Interpolates between current fov and target fov
+
+        // Interpolates between current fov and target fov
         const float InFieldOfView = FMath::FInterpTo(CameraComponent->FieldOfView, TargetFOV, DeltaTime, FOVChangeSpeed);
         // Sets the new camera FOV
         CameraComponent->SetFieldOfView(InFieldOfView);
@@ -631,7 +643,7 @@ void AFPSCharacter::Tick(const float DeltaTime)
     }
 
     // Continuous aiming check (so that you don't have to re-press the ADS button every time you jump/sprint/reload/etc)
-    if (bWantsToAim == true && MovementState != EMovementState::State_Sprint && MovementState != EMovementState::State_Slide)
+    if (bWantsToAim == true && MovementState != EMovementState::State_Slide)
     {
         bIsAiming = true;
     }
@@ -653,12 +665,11 @@ void AFPSCharacter::Tick(const float DeltaTime)
     // Checks the floor angle to determine whether we should keep sliding or not
     CheckGroundAngle(DeltaTime);
 
-
     if (bDrawDebug)
     {
         if (InventoryComponent)
         {
-            for ( int Index = 0; Index < InventoryComponent->GetNumberOfWeaponSlots(); Index++ )
+            for (int Index = 0; Index < InventoryComponent->GetNumberOfWeaponSlots(); Index++)
             {
                 if (InventoryComponent->GetEquippedWeapons().Contains(Index))
                 {
@@ -679,43 +690,42 @@ void AFPSCharacter::Tick(const float DeltaTime)
 }
 
 // Called to bind functionality to input
-void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AFPSCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-        
     // Make sure that we are using a UEnhancedInputComponent; if not, the project is not configured correctly.
-    if (UEnhancedInputComponent* PlayerEnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-    {        
-        if (UInteractionComponent* InteractionComponent = FindComponentByClass<UInteractionComponent>())
+    if (UEnhancedInputComponent *PlayerEnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+    {
+        if (UInteractionComponent *InteractionComponent = FindComponentByClass<UInteractionComponent>())
         {
             InteractionComponent->InteractAction = InteractAction;
             InteractionComponent->SetupInputComponent(PlayerEnhancedInputComponent);
         }
 
-        if (UInventoryComponent* InventoryComp = FindComponentByClass<UInventoryComponent>())
-        {            
+        if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
+        {
             InventoryComp->FiringAction = FiringAction;
             InventoryComp->PrimaryWeaponAction = PrimaryWeaponAction;
             InventoryComp->SecondaryWeaponAction = SecondaryWeaponAction;
             InventoryComp->ReloadAction = ReloadAction;
             InventoryComp->ScrollAction = ScrollAction;
             InventoryComp->InspectWeaponAction = InspectWeaponAction;
-            
+
             InventoryComp->SetupInputComponent(PlayerEnhancedInputComponent);
         }
-        
+
         if (JumpAction)
         {
             // Jumping
             PlayerEnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AFPSCharacter::Jump);
         }
-        
-        if (SprintAction)
+
+        if (WalkAction)
         {
-            // Sprinting
-            PlayerEnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AFPSCharacter::StartSprint);
-            PlayerEnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AFPSCharacter::StopSprint);
+            // Walking
+            PlayerEnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Started, this, &AFPSCharacter::StartWalk);
+            PlayerEnhancedInputComponent->BindAction(WalkAction, ETriggerEvent::Completed, this, &AFPSCharacter::StopWalk);
         }
 
         if (MovementAction)

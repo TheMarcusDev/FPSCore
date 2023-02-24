@@ -25,11 +25,11 @@ class UBlendSpace;
 UENUM(BlueprintType)
 enum class EMovementState : uint8
 {
-	State_Walk      UMETA(DisplayName = "Walking"),
-	State_Sprint    UMETA(DisplayName = "Sprinting"),
-	State_Crouch    UMETA(DisplayName = "Crouching"),
-	State_Slide		UMETA(DisplayName = "Sliding"),
-	State_Vault	    UMETA(DisplayName = "Vaulting")
+	State_Walk UMETA(DisplayName = "Walking"),
+	State_Sprint UMETA(DisplayName = "Sprinting"),
+	State_Crouch UMETA(DisplayName = "Crouching"),
+	State_Slide UMETA(DisplayName = "Sliding"),
+	State_Vault UMETA(DisplayName = "Vaulting")
 };
 
 /** Variables associated with each movement state */
@@ -63,7 +63,6 @@ class FPSCORE_API AFPSCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-
 	/** Returns the character's forward movement (from 0 to 1) */
 	UFUNCTION(BlueprintCallable, Category = "FPS Character")
 	float GetForwardMovement() const { return ForwardMovement; }
@@ -99,32 +98,32 @@ public:
 	/** Returns whether the player is currently aiming or not */
 	UFUNCTION(BlueprintPure, Category = "FPS Character")
 	bool IsPlayerAiming() const { return bIsAiming; }
-	
+
 	/** Returns the character's current movement state */
 	UFUNCTION(BlueprintPure, Category = "FPS Character")
 	EMovementState GetMovementState() const { return MovementState; }
 
 	/** Returns the character's hands mesh */
-	USkeletalMeshComponent* GetHandsMesh() const { return HandsMeshComp; }
+	USkeletalMeshComponent *GetHandsMesh() const { return HandsMeshComp; }
 
 	/** Returns a reference to the player's camera component */
-	UCameraComponent* GetCameraComponent() const { return CameraComponent; }
+	UCameraComponent *GetCameraComponent() const { return CameraComponent; }
 
 	/** Returns the character's empty-handed walking blend space */
 	UFUNCTION(BlueprintPure, Category = "FPS Character")
-	UBlendSpace* GetEmptyWalkBlendSpace() const { return BS_Walk; }
+	UBlendSpace *GetEmptyWalkBlendSpace() const { return BS_Walk; }
 
 	/** Returns the character's empty-handed idle animation */
 	UFUNCTION(BlueprintPure, Category = "FPS Character")
-	UAnimSequence* GetEmptyIdleAnim() const { return Anim_Idle; }
+	UAnimSequence *GetEmptyIdleAnim() const { return Anim_Idle; }
 
 	/** Returns the character's set of animations */
-	UFUNCTION(BlueprintPure, Category = "Weapon Base", meta=(DeprecatedFunction))
+	UFUNCTION(BlueprintPure, Category = "Weapon Base", meta = (DeprecatedFunction))
 	FHandsAnimSet GetWeaponAnimations() const
 	{
 		return GetPlayerAnimations();
 	}
-	
+
 	/** Returns the character's set of animations */
 	UFUNCTION(BlueprintPure, Category = "Weapon Base")
 	FHandsAnimSet GetPlayerAnimations() const
@@ -143,10 +142,10 @@ public:
 
 	/** Returns the character's current input mapping context */
 	UFUNCTION(BlueprintPure, Category = "FPS Character")
-	UInputMappingContext* GetBaseMappingContext() const { return BaseMappingContext; }
+	UInputMappingContext *GetBaseMappingContext() const { return BaseMappingContext; }
 
 	/** Returns the Inventory Component */
-	UInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+	UInventoryComponent *GetInventoryComponent() const { return InventoryComponent; }
 
 	UFUNCTION(BlueprintCallable, Category = "FPS Character")
 	void UpdateFOVOffset(const float NewOffset) { FOVOffset = NewOffset; }
@@ -158,54 +157,52 @@ public:
 	}
 
 	/** A global system that handles updates to the movement state and changes relevant values accordingly
-	*	@param NewMovementState The new movement state of the player
-	*/
+	 *	@param NewMovementState The new movement state of the player
+	 */
 	void UpdateMovementState(EMovementState NewMovementState);
-	
-protected:
 
+protected:
 	/** The character's FPS camera component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Components")
-	UCameraComponent* CameraComponent;
+	UCameraComponent *CameraComponent;
 
 	/** The character's hands mesh component */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
-	USkeletalMeshComponent* HandsMeshComp;
-	
+	USkeletalMeshComponent *HandsMeshComp;
+
 	/** The spring arm component, which is required to enable 'use control rotation' */
 	UPROPERTY(EditDefaultsOnly, Category = "Components")
-	USpringArmComponent* SpringArmComponent;
-	
+	USpringArmComponent *SpringArmComponent;
+
 	/** Hand animation blend space for when the player has no weapon  */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Blend Spaces")
-	UBlendSpace* BS_Walk;
-	
+	UBlendSpace *BS_Walk;
+
 	/** Hand animation for when the player has no weapon and is idle */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Sequences")
-	UAnimSequence* Anim_Idle;
-	
+	UAnimSequence *Anim_Idle;
+
 	/** Hand animation for when the player has no weapon and starts to jump */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Sequences")
-	UAnimSequence* Anim_Jump_Start;
+	UAnimSequence *Anim_Jump_Start;
 
 	/** Hand animation for when the player has no weapon and stops jumping */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Sequences")
-	UAnimSequence* Anim_Jump_End;
+	UAnimSequence *Anim_Jump_End;
 
 	/** Hand animation for when the player has no weapon and is falling */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Sequences")
-	UAnimSequence* Anim_Fall;
-	
+	UAnimSequence *Anim_Fall;
+
 	/** Hand animation for when the player has no weapon and is sprinting */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Sequences")
-	UAnimSequence* Anim_Sprint;
+	UAnimSequence *Anim_Sprint;
 
 	/** Hand montage, played during vault */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Montages")
-	UAnimMontage* VaultMontage;
+	UAnimMontage *VaultMontage;
 
 private:
-
 #pragma region FUNCTIONS
 
 	/** Sets default values for this character's properties */
@@ -215,25 +212,26 @@ private:
 	virtual void BeginPlay() override;
 
 	virtual void PawnClientRestart() override;
-	
+
 	/** Alternative to the built in Crouch function
 	 *  Handles crouch input and decides what action to perform based on the character's current state
 	 */
 	void ToggleCrouch();
-	
+
 	/** Transitions the character out of the crouched state
-	 *	@param bToSprint Whether to transition into a sprint state
+	 *	@param bToWalk Whether to transition into a sprint state
 	 */
-	void StopCrouch(bool bToSprint);;
+	void StopCrouch(bool bToWalk);
+	;
 
 	/** Exits the character from the slide state if they are sliding and updates bHoldingCrouch */
 	void ReleaseCrouch();
 
-	/** Starting to sprint */
-	void StartSprint();
+	/** Starting to walk */
+	void StartWalk();
 
-	/** Stopping to sprint */
-	void StopSprint();
+	/** Stopping to walk */
+	void StopWalk();
 
 	/** Starting to slide */
 	void StartSlide();
@@ -243,12 +241,12 @@ private:
 
 	/** Function that runs on tick and checks if we should execute the Vault() functions */
 	void CheckVault();
-	
+
 	/** Function that actually executes the Vault
 	 * @param TargetTransform The location to which to interpolate the player
 	 */
 	void Vault(FTransform TargetTransform);
-	
+
 	/** Checks the angle of the floor to determine slide behaviour */
 	void CheckGroundAngle(float DeltaTime);
 
@@ -265,46 +263,46 @@ private:
 	/** Move the character left/right and forward/back
 	 *	@param Value The value passed in by the Input Component
 	 */
-	void Move(const FInputActionValue& Value);
+	void Move(const FInputActionValue &Value);
 
 	/** Look left/right and up/down
 	 *	@param Value The value passed in by the Input Component
 	 */
-	void Look(const FInputActionValue& Value);
+	void Look(const FInputActionValue &Value);
 
 	/** Starts ADS */
 	void StartAds();
 
 	/** Ends ADS */
 	void StopAds();
-		
+
 	/** Called every frame */
 	virtual void Tick(float DeltaTime) override;
 
-#pragma endregion 
+#pragma endregion
 
 #pragma region USER_VARIABLES
-		
+
 	/** Prints debug variables if true */
 	UPROPERTY(EditDefaultsOnly, Category = "Debug")
 	bool bDrawDebug;
-	
-	/** Sets the height of the player's capsule component when crouched */	
+
+	/** Sets the height of the player's capsule component when crouched */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Crouch")
 	float CrouchedCapsuleHalfHeight = 58.0f;
-	
+
 	/** The rate at which the character crouches */
-	UPROPERTY(EditDefaultsOnly, Category = "Movement | Crouch") 
+	UPROPERTY(EditDefaultsOnly, Category = "Movement | Crouch")
 	float CrouchSpeed = 10.0f;
 
 	/** Whether crouching has to be held or can be toggled */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Crouch")
-	bool bCrouchIsToggle = true;
+	bool bCrouchIsToggle = false;
 
 	/** Whether to prevent the user from sprinting past a specific angle */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Sprint")
 	bool bRestrictSprintAngle;
-	
+
 	/** The maximum angle at which the player can sprint before returning to a walk */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Sprint")
 	float SprintAngleLimit = 180;
@@ -312,7 +310,7 @@ private:
 	/** Whether the character is allowed to slide */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Slide")
 	bool bCanSlide = true;
-	
+
 	/** The time in seconds between the beginning of a slide and when it is ended */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Slide")
 	float SlideTime = 1.0f;
@@ -322,13 +320,13 @@ private:
 	float SlideContinueAngle = -15.0f;
 
 	/** Whether the character is allowed to vault */
-	UPROPERTY(EditDefaultsOnly, Category = "Movement | Vault")	
+	UPROPERTY(EditDefaultsOnly, Category = "Movement | Vault")
 	bool bCanVault = true;
-	
+
 	/** The height of the highest surface that the player can mantle up onto */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Vault")
 	float MaxMantleHeight = 200.0f;
-	
+
 	/** The amount of traces to draw for vault collision checks, to get distance in unreal units, multiply by 5 */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Vault")
 	int VaultTraceAmount = 25.0f;
@@ -339,41 +337,41 @@ private:
 
 	/** Curve that controls motion during vault */
 	UPROPERTY(EditAnywhere, Category = "Movement | Vault")
-	UCurveFloat* VaultTimelineCurve;
-	
+	UCurveFloat *VaultTimelineCurve;
+
 	/** A map holding data for each movement state */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Data")
 	TMap<EMovementState, FMovementVariables> MovementDataMap;
-	
+
 	/** The game's default FOV */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera | FOV")
 	float BaseFOV = 77.0f;
-	
+
 	/** The speed at which FOV changes occur */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera | FOV")
 	float FOVChangeSpeed = 6.0f;
-	
+
 	/** The increase in FOV during fast actions, such as sprinting and sliding */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera | FOV")
 	float SpeedFOVChange = 5.0f;
 
-#pragma endregion 
+#pragma endregion
 
 #pragma region INTERNAL_VARIABLES
-	
+
 	/** Enumerator holding the 5 possible movement states defined by EMovementState */
 	UPROPERTY()
-    EMovementState MovementState;
-	
+	EMovementState MovementState;
+
 	/** The timeline for vaulting (generated from the curve) */
 	UPROPERTY()
 	FTimeline VaultTimeline;
-	
+
 	/** Hit results for various line traces */
 	FHitResult FootstepHit;
 
 	FHitResult StandUpHit;
-	
+
 	FHitResult VaultHit;
 
 	FHitResult VaultHeightHit;
@@ -381,54 +379,57 @@ private:
 	FHitResult MantleHit;
 
 	FHitResult AngleHit;
-	
+
 	/** Whether the player is holding down the aim down sights button */
 	bool bWantsToAim;
 
-	/** Whether the player is holding down the sprint key */
-	bool bWantsToSprint;
+	/** Whether the player is holding down the walk key */
+	bool bWantsToWalk = false;
 
 	bool bRestrictingSprint = false;
-	
+
 	/** Whether we should display a crosshair or not */
 	bool bShowCrosshair;
-	
+
 	/** Whether the player is actually aiming down sights */
 	bool bIsAiming;
-	
+
 	/** Whether we are currently vaulting or not */
 	bool bIsVaulting;
-	
+
 	/** Whether the player is holding the crouch button */
 	bool bHoldingCrouch;
-	
+
 	/** Whether the character has performed a slide yet? */
-	bool bPerformedSlide;
-	
+	bool bPerformedSlide = false;
+
 	/** Whether the player wants to slide (is holding the crouch/slide key, but not on the ground) */
 	bool bWantsToSlide;
-	
+
 	/** Whether the character is sprinting */
 	bool bIsSprinting;
-	
+
+	/** Whether the character is walking */
+	bool bIsWalking;
+
 	/** Whether the character is crouching */
 	bool bIsCrouching;
-	
+
 	/** The start location of a vaulting or mantle */
 	FTransform VaultStartLocation;
 
 	/** The end location of a vault or mantle */
 	FTransform VaultEndLocation;
-	
+
 	/** Set automatically, the base height of the capsule */
 	float DefaultCapsuleHalfHeight;
 
 	/** The current angle of the floor beneath the player */
 	float FloorAngle;
-	
+
 	/** The forward movement value (used to drive animations) */
 	float ForwardMovement;
-	
+
 	/** The right movement value (used to drive animations) */
 	float RightMovement;
 
@@ -437,7 +438,7 @@ private:
 
 	/** The right look value (used to drive procedural weapon sway) */
 	float MouseX;
-	
+
 	/** The change in height of the spring arm that the camera + hands rest on when the player is crouched. This
 	 *	is calculated automatically
 	 *
@@ -449,81 +450,81 @@ private:
 
 	/** The default offset of the spring arm from a Z position of 0, set automatically on BeginPlay */
 	float DefaultSpringArmOffset;
-	
+
 	/** The current offset of the spring arm */
 	float CurrentSpringArmOffset = 0.0f;
 
 	/** A user-driven FOV offset. This will apply an additional offset to the base FOV, whatever that may be. */
-	float FOVOffset; 
-	
+	float FOVOffset;
+
 	/** The target location of a vault or mantle */
 	FTransform VaultTargetLocation;
 
 	/** Timer manager for sliding */
 	FTimerHandle SlideStop;
 
-	/** A reference to the player's Inventory Component */ 
+	/** A reference to the player's Inventory Component */
 	UPROPERTY()
-	UInventoryComponent* InventoryComponent;
+	UInventoryComponent *InventoryComponent;
 
-#pragma endregion 
+#pragma endregion
 
 #pragma region INPUT
 
 	/** Input actions */
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* MovementAction;
+	UInputAction *MovementAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* LookAction;
+	UInputAction *LookAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* JumpAction;
+	UInputAction *JumpAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* SprintAction;
+	UInputAction *WalkAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* CrouchAction;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* FiringAction;
+	UInputAction *CrouchAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* PrimaryWeaponAction;
+	UInputAction *FiringAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* SecondaryWeaponAction;
+	UInputAction *PrimaryWeaponAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* ReloadAction;
+	UInputAction *SecondaryWeaponAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* AimAction;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* InteractAction;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* ScrollAction;
+	UInputAction *ReloadAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* InspectWeaponAction;
-	
+	UInputAction *AimAction;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
-	UInputAction* PauseAction;
+	UInputAction *InteractAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
+	UInputAction *ScrollAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
+	UInputAction *InspectWeaponAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input | Actions")
+	UInputAction *PauseAction;
 
 	/** Input Mappings */
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Mappings")
-	UInputMappingContext* BaseMappingContext;
-	
+	UInputMappingContext *BaseMappingContext;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Input | Mappings")
 	int32 BaseMappingPriority = 0;
 
 	/** Called to bind functionality to input */
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent *PlayerInputComponent) override;
 
 #pragma endregion
 };
