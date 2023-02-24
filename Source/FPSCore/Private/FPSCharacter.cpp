@@ -58,6 +58,7 @@ void AFPSCharacter::BeginPlay()
     if (MovementDataMap.Contains(EMovementState::State_Sprint))
     {
         GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[EMovementState::State_Sprint].MaxWalkSpeed;
+        UpdateMovementState(EMovementState::State_Sprint);
     }
     else
     {
