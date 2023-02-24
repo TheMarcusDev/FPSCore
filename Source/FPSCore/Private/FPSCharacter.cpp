@@ -58,7 +58,6 @@ void AFPSCharacter::BeginPlay()
     if (MovementDataMap.Contains(EMovementState::State_Sprint))
     {
         GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[EMovementState::State_Sprint].MaxWalkSpeed;
-        UpdateMovementState(EMovementState::State_Sprint);
     }
     else
     {
@@ -600,6 +599,12 @@ void AFPSCharacter::Tick(const float DeltaTime)
     FVector NewSpringArmLocation = SpringArmComponent->GetRelativeLocation();
     NewSpringArmLocation.Z = NewLocation;
     SpringArmComponent->SetRelativeLocation(NewSpringArmLocation);
+
+    // Set state to sprint every time walk is not pressed
+    if (!bWantsToWalk)
+    {
+        UpdateMovementState(EMovementState::State_Sprint);
+    }
 
     if (bRestrictSprintAngle)
     {
