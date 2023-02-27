@@ -239,6 +239,9 @@ private:
 	/** Stopping to slide */
 	void StopSlide();
 
+	/** Slide Timing Out */
+	void TimeOutSlide();
+
 	/** Function that runs on tick and checks if we should execute the Vault() functions */
 	void CheckVault();
 
@@ -314,6 +317,10 @@ private:
 	/** The time in seconds between the beginning of a slide and when it is ended */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Slide")
 	float SlideTime = 1.0f;
+
+	/** The time in seconds before the player can slide again */
+	UPROPERTY(EditDefaultsOnly, Category = "Movement | Slide")
+	float SlideTimeOut = 1.0f;
 
 	/** The angle that the floor has to be at in order for sliding to not be cancelled after SlideTime has passed */
 	UPROPERTY(EditDefaultsOnly, Category = "Movement | Slide")
@@ -462,6 +469,9 @@ private:
 
 	/** Timer manager for sliding */
 	FTimerHandle SlideStop;
+
+	/** Timer manager for sliding */
+	FTimerHandle SlideTimeOutHandler;
 
 	/** A reference to the player's Inventory Component */
 	UPROPERTY()

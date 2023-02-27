@@ -15,14 +15,14 @@
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = true;
 
     // Creating our weapon's skeletal mesh, telling it to not cast shadows and finally setting it as the root of the actor
     MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
     MeshComp->CastShadow = false;
     RootComponent = MeshComp;
-    
+
     // Creating the skeletal meshes for our attachments and making sure that they do not cast shadows
 
     BarrelAttachment = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BarrelAttachment"));
@@ -46,11 +46,10 @@ AWeaponBase::AWeaponBase()
     GripAttachment->SetupAttachment(RootComponent);
 }
 
-
 // Called when the game starts or when spawned
 void AWeaponBase::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
     // Getting a reference to the relevant row in the WeaponData DataTable
     if (WeaponDataTable && (DataTableNameRef != ""))
@@ -61,10 +60,10 @@ void AWeaponBase::BeginPlay()
     {
         GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, TEXT("MISSING A WEAPON DATA TABLE NAME REFERENCE"));
     }
-    
+
     // Setting our default animation values
     // We set these here, but they can be overriden later by variables from applied attachments.
-    
+
     if (WeaponData.WeaponEquip)
     {
         WeaponEquip = WeaponData.WeaponEquip;
@@ -90,7 +89,6 @@ void AWeaponBase::BeginPlay()
         Anim_ADS_Idle = WeaponData.Anim_Ads_Idle;
     }
 
-
     // Setting our recoil & recovery curves
     if (VerticalRecoilCurve)
     {
@@ -113,8 +111,6 @@ void AWeaponBase::BeginPlay()
         RecoilRecoveryTimeline.AddInterpFloat(RecoveryCurve, RecoveryProgressFunction);
     }
 }
-
-
 
 void AWeaponBase::SpawnAttachments()
 {
@@ -156,9 +152,11 @@ void AWeaponBase::SpawnAttachments()
                     WeaponData.ShotgunPellets = AttachmentData->ShotgunPellets;
                     WeaponData.EmptyWeaponReload = AttachmentData->EmptyWeaponReload;
                     WeaponData.WeaponReload = AttachmentData->WeaponReload;
+                    WeaponData.WeaponIdle = AttachmentData->WeaponIdle;
                     WeaponData.EmptyPlayerReload = AttachmentData->EmptyPlayerReload;
                     WeaponData.PlayerReload = AttachmentData->PlayerReload;
                     WeaponData.Gun_Shot = AttachmentData->Gun_Shot;
+                    WeaponData.Player_Shot = AttachmentData->Player_Shot;
                     WeaponData.AccuracyDebuff = AttachmentData->AccuracyDebuff;
                     WeaponData.bWaitForAnim = AttachmentData->bWaitForAnim;
                     WeaponData.bPreventRapidManualFire = AttachmentData->bPreventRapidManualFire;
@@ -222,7 +220,7 @@ void AWeaponBase::SpawnAttachments()
 }
 
 void AWeaponBase::StartFire()
-{ 
+{
     if (bCanFire)
     {
         // sets a timer for firing the weapon - if bAutomaticFire is true then this timer will repeat until cleared by StopFire(), leading to fully automatic fire
@@ -236,14 +234,13 @@ void AWeaponBase::StartFire()
         // Simultaneously begins to play the recoil timeline
         StartRecoil();
     }
-    
 }
 
 void AWeaponBase::StartRecoil()
 {
-    const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    const AFPSCharacterController* CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
-    
+    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    const AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+
     if (bCanFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading && CharacterController)
     {
         // Plays the recoil timelines and saves the current control rotation in order to recover to it
@@ -278,32 +275,31 @@ void AWeaponBase::StopFire()
         bHasFiredRecently = false;
         bIsWeaponReadyToFire = false;
         GetWorldTimerManager().ClearTimer(SpamFirePreventionDelay);
-        //GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::SanitizeFloat(GetWorldTimerManager().GetTimerRemaining(ShotDelay)));
+        // GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::SanitizeFloat(GetWorldTimerManager().GetTimerRemaining(ShotDelay)));
         GetWorldTimerManager().SetTimer(SpamFirePreventionDelay, this, &AWeaponBase::ReadyToFire, GetWorldTimerManager().GetTimerRemaining(ShotDelay), false, GetWorldTimerManager().GetTimerRemaining(ShotDelay));
     }
     GetWorldTimerManager().ClearTimer(ShotDelay);
 }
 
 void AWeaponBase::Fire()
-{    
+{
     // Allowing the gun to fire if it has ammunition, is not reloading and the bCanFire variable is true
-    if(bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
+    if (bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
     {
         // Casting to the player character
-        const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    
+        const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
         // Printing debug strings
-        if(bShowDebug)
+        if (bShowDebug)
         {
             GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, "Fire", true);
             GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::FromInt(GeneralWeaponData.ClipSize > 0 && !bIsReloading), true);
         }
-        
 
         // Subtracting from the ammunition count of the weapon
-       GeneralWeaponData.ClipSize -= 1;
+        GeneralWeaponData.ClipSize -= 1;
 
-        const int NumberOfShots = WeaponData.bIsShotgun? WeaponData.ShotgunPellets : 1;
+        const int NumberOfShots = WeaponData.bIsShotgun ? WeaponData.ShotgunPellets : 1;
         // We run this for the number of bullets/projectiles per shot, in order to support shotguns
         for (int i = 0; i < NumberOfShots; i++)
         {
@@ -316,7 +312,7 @@ void AWeaponBase::Fire()
             {
                 AccuracyMultiplier = WeaponData.AccuracyDebuff;
             }
-            
+
             TraceStartRotation.Pitch += FMath::FRandRange(
                 -((WeaponData.WeaponPitchVariation + WeaponPitchModifier) * AccuracyMultiplier),
                 (WeaponData.WeaponPitchVariation + WeaponPitchModifier) * AccuracyMultiplier);
@@ -327,7 +323,6 @@ void AWeaponBase::Fire()
             TraceEnd = TraceStart + (TraceDirection * (WeaponData.bIsShotgun
                                                            ? WeaponData.ShotgunRange
                                                            : WeaponData.LengthMultiplier));
-            
 
             // Applying Recoil to the weapon
             Recoil();
@@ -338,59 +333,61 @@ void AWeaponBase::Fire()
                 MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
                 if (WeaponData.bWaitForAnim)
                 {
-                    // Preventing the player from firing the weapon until the animation finishes playing 
+                    // Preventing the player from firing the weapon until the animation finishes playing
                     const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
                     bCanFire = false;
                     GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
                 }
             }
 
+            if (WeaponData.Player_Shot)
+            {
+                AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
+            }
+
             FVector EndPoint = TraceEnd;
 
-            	
             /** collision parameters for spawning the line trace */
             FCollisionQueryParams QueryParams;
 
-            //Sets the default values for our trace query
+            // Sets the default values for our trace query
             QueryParams.AddIgnoredActor(this);
             QueryParams.bTraceComplex = true;
             QueryParams.bReturnPhysicalMaterial = true;
 
-            // Drawing a line trace based on the parameters calculated previously 
-            if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_GameTraceChannel1, QueryParams))
-            {                
+            // Drawing a line trace based on the parameters calculated previously
+            if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_GameTraceChannel1, QueryParams))
+            {
                 // Drawing debug line trace
                 if (bShowDebug)
                 {
                     // Debug line from muzzle to hit location
                     DrawDebugLine(
-                        GetWorld(), (WeaponData.bHasAttachments
-                                         ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation)
-                                         : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation)), Hit.Location,
-                                         FColor::Red, false, 10.0f, 0.0f, 2.0f);
+                        GetWorld(), (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation)), Hit.Location,
+                        FColor::Red, false, 10.0f, 0.0f, 2.0f);
 
                     if (bDrawObstructiveDebugs)
                     {
                         // Debug line from camera to hit location
-                        DrawDebugLine(GetWorld(), TraceStart, Hit.Location,FColor::Orange, false, 10.0f, 0.0f, 2.0f);
+                        DrawDebugLine(GetWorld(), TraceStart, Hit.Location, FColor::Orange, false, 10.0f, 0.0f, 2.0f);
 
                         // Debug line from camera to target location
                         DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Green, false, 10.0f, 0.0f, 2.0f);
                     }
                 }
-                
+
                 // Resetting finalDamage
                 FinalDamage = 0.0f;
 
                 // Setting finalDamage based on the type of surface hit
                 FinalDamage = (WeaponData.BaseDamage + DamageModifier);
-                
+
                 if (Hit.PhysMaterial.Get() == WeaponData.HeadshotDamageSurface)
                 {
                     FinalDamage = (WeaponData.BaseDamage + DamageModifier) * WeaponData.HeadshotMultiplier;
                 }
 
-                AActor* HitActor = Hit.GetActor();
+                AActor *HitActor = Hit.GetActor();
 
                 // Applying the previously set damage to the hit actor
                 UGameplayStatics::ApplyPointDamage(HitActor, FinalDamage, TraceDirection, Hit,
@@ -399,10 +396,10 @@ void AWeaponBase::Fire()
                 EndPoint = Hit.Location;
 
                 // Passing hit delegate to InventoryComponent
-                AFPSCharacter* PlayerRef = Cast<AFPSCharacter>(GetOwner());
+                AFPSCharacter *PlayerRef = Cast<AFPSCharacter>(GetOwner());
                 if (PlayerRef)
                 {
-                    UInventoryComponent* PlayerInventoryComp = PlayerRef->FindComponentByClass<UInventoryComponent>();
+                    UInventoryComponent *PlayerInventoryComp = PlayerRef->FindComponentByClass<UInventoryComponent>();
                     if (IsValid(PlayerInventoryComp))
                     {
                         PlayerInventoryComp->EventHitActor.Broadcast(Hit);
@@ -415,9 +412,7 @@ void AWeaponBase::Fire()
                 if (bShowDebug)
                 {
                     DrawDebugLine(
-                        GetWorld(), (WeaponData.bHasAttachments
-                                         ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation)
-                                         : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation)), TraceEnd,
+                        GetWorld(), (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation)), TraceEnd,
                         FColor::Red, false, 10.0f, 0.0f, 2.0f);
 
                     if (bDrawObstructiveDebugs)
@@ -430,22 +425,24 @@ void AWeaponBase::Fire()
 
             const FRotator ParticleRotation = (EndPoint - (WeaponData.bHasAttachments
                                                                ? BarrelAttachment->GetSocketLocation(
-                                                                   WeaponData.MuzzleLocation)
+                                                                     WeaponData.MuzzleLocation)
                                                                : MeshComp->GetSocketLocation(
-                                                                   WeaponData.MuzzleLocation))).Rotation();
-            
+                                                                     WeaponData.MuzzleLocation)))
+                                                  .Rotation();
+
             // Spawning the bullet trace particle effect
             if (WeaponData.bHasAttachments)
             {
                 UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace,
-                                                         BarrelAttachment->GetSocketLocation(
-                                                             WeaponData.ParticleSpawnLocation), ParticleRotation);
+                                                               BarrelAttachment->GetSocketLocation(
+                                                                   WeaponData.ParticleSpawnLocation),
+                                                               ParticleRotation);
             }
             else
             {
                 UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace,
-                                                         MeshComp->GetSocketLocation(WeaponData.ParticleSpawnLocation),
-                                                         ParticleRotation);
+                                                               MeshComp->GetSocketLocation(WeaponData.ParticleSpawnLocation),
+                                                               ParticleRotation);
             }
 
             // Selecting the hit effect based on the hit physical surface material (hit.PhysMaterial.Get()) and spawning it (Niagara)
@@ -476,18 +473,18 @@ void AWeaponBase::Fire()
         if (WeaponData.bHasAttachments)
         {
             UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, BarrelAttachment, WeaponData.ParticleSpawnLocation,
-                                                    FVector::ZeroVector,
-                                                    BarrelAttachment->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
+                                                         FVector::ZeroVector,
+                                                         BarrelAttachment->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
         }
         else
         {
             UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, MeshComp, WeaponData.ParticleSpawnLocation,
-                                                   FVector::ZeroVector,
-                                                   MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
+                                                         FVector::ZeroVector,
+                                                         MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
         }
 
         // Spawning the firing sound
-        if(WeaponData.bSilenced)
+        if (WeaponData.bSilenced)
         {
             UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.SilencedSound, TraceStart);
         }
@@ -495,7 +492,6 @@ void AWeaponBase::Fire()
         {
             UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.FireSound, TraceStart);
         }
-
 
         FRotator EjectionSpawnVector = FRotator::ZeroRotator;
         EjectionSpawnVector.Yaw = 270.0f;
@@ -520,13 +516,12 @@ void AWeaponBase::Fire()
 
         RecoilRecovery();
     }
-    
 }
 
 void AWeaponBase::Recoil()
 {
-    const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    AFPSCharacterController* CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // Apply recoil by adding a pitch and yaw input to the character controller
     if (WeaponData.bAutomaticFire && CharacterController && ShotsFired > 0 && IsValid(WeaponData.VerticalRecoilCurve) && IsValid(WeaponData.HorizontalRecoilCurve))
@@ -541,7 +536,7 @@ void AWeaponBase::Recoil()
     }
 
     ShotsFired += 1;
-    GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(WeaponData.RecoilCameraShake);  
+    GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(WeaponData.RecoilCameraShake);
 }
 
 void AWeaponBase::RecoilRecovery()
@@ -553,7 +548,6 @@ void AWeaponBase::RecoilRecovery()
     }
 }
 
-
 bool AWeaponBase::Reload()
 {
     if (!bCanReload)
@@ -561,8 +555,8 @@ bool AWeaponBase::Reload()
         return false;
     }
     // Casting to the character controller (which stores all the ammunition and health variables)
-    const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    AFPSCharacterController* CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // Changing the maximum ammunition based on if the weapon can hold a bullet in the chamber
     int Value = 0;
@@ -575,9 +569,7 @@ bool AWeaponBase::Reload()
     // (current ammunition does not match maximum magazine capacity and there is spare ammunition to load into the gun)
     if (CharacterController->AmmoMap.Contains(GeneralWeaponData.AmmoType))
     {
-        if (!bIsReloading && CharacterController->AmmoMap[GeneralWeaponData.AmmoType] > 0 && (GeneralWeaponData.ClipSize
-            !=
-            (GeneralWeaponData.ClipCapacity + Value)))
+        if (!bIsReloading && CharacterController->AmmoMap[GeneralWeaponData.AmmoType] > 0 && (GeneralWeaponData.ClipSize != (GeneralWeaponData.ClipCapacity + Value)))
         {
             // Differentiating between having no ammunition in the magazine (having to chamber a round after reloading)
             // or not, and playing an animation relevant to that
@@ -599,7 +591,7 @@ bool AWeaponBase::Reload()
             {
                 if (WeaponData.bHasAttachments)
                 {
-                    MagazineAttachment->PlayAnimation(WeaponData.WeaponReload, false);
+                    AnimTime = MagazineAttachment->GetAnimInstance()->Montage_Play(WeaponData.WeaponReload, 1.0f);
                 }
                 else
                 {
@@ -632,17 +624,17 @@ bool AWeaponBase::Reload()
 }
 
 void AWeaponBase::UpdateAmmo()
-{ 
+{
     // Printing debug strings
-    if(bShowDebug)
+    if (bShowDebug)
     {
         GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, "UpdateAmmo", true);
     }
 
     // Casting to the game instance (which stores all the ammunition and health variables)
-    const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    AFPSCharacterController* CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
-    
+    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+
     // value system to reload the correct amount of bullets if the weapon is using a chambered reloading system
     int Value = 0;
 
@@ -651,12 +643,12 @@ void AWeaponBase::UpdateAmmo()
     {
         Value = 1;
 
-        if(bShowDebug)
+        if (bShowDebug)
         {
             GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "Value = 1", true);
         }
     }
-    
+
     // First, we set Temp, which keeps track of the difference between the maximum ammunition and the amount that there
     // is currently loaded (i.e. how much ammunition we need to reload into the gun)
     const int Temp = GeneralWeaponData.ClipCapacity - GeneralWeaponData.ClipSize;
@@ -676,7 +668,7 @@ void AWeaponBase::UpdateAmmo()
     }
 
     // Print debug strings
-    if(bShowDebug)
+    if (bShowDebug)
     {
         GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Blue, FString::FromInt(GeneralWeaponData.ClipSize), true);
         GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Blue, FString::FromInt(CharacterController->AmmoMap[GeneralWeaponData.AmmoType]), true);
@@ -684,32 +676,33 @@ void AWeaponBase::UpdateAmmo()
 
     // Resetting bIsReloading and allowing the player to fire the gun again
     bIsReloading = false;
-    
 
-    // Making sure the player cannot fire if sprinting
-    if (!(PlayerCharacter->GetMovementState() == EMovementState::State_Sprint) && !(PlayerCharacter->GetMovementState() == EMovementState::State_Slide))
+    // Making sure the player cannot fire if sliding
+    if (!(PlayerCharacter->GetMovementState() == EMovementState::State_Slide))
     {
         EnableFire();
     }
 
+    // Setting weapon animation after reload
+    MeshComp->PlayAnimation(WeaponData.WeaponIdle, false);
+
     bIsWeaponReadyToFire = true;
 }
-
 
 // Called every frame
 void AWeaponBase::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
-        
+    Super::Tick(DeltaTime);
+
     VerticalRecoilTimeline.TickTimeline(DeltaTime);
     HorizontalRecoilTimeline.TickTimeline(DeltaTime);
     RecoilRecoveryTimeline.TickTimeline(DeltaTime);
 
     if (bShowDebug)
     {
-        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, bHasFiredRecently? TEXT("Has fired recently") : TEXT("Has not fired recently"));
-        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, bCanFire? TEXT("Can Fire") : TEXT("Can not Fire"));
-        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, bIsWeaponReadyToFire? TEXT("Weapon is ready to fire") : TEXT("Weapon is not ready to fire"));
+        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, bHasFiredRecently ? TEXT("Has fired recently") : TEXT("Has not fired recently"));
+        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, bCanFire ? TEXT("Can Fire") : TEXT("Can not Fire"));
+        GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, bIsWeaponReadyToFire ? TEXT("Weapon is ready to fire") : TEXT("Weapon is not ready to fire"));
     }
 }
 
@@ -717,11 +710,11 @@ void AWeaponBase::Tick(float DeltaTime)
 void AWeaponBase::HandleRecoveryProgress(float Value) const
 {
     // Getting a reference to the Character Controller
-    const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    AFPSCharacterController* CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
-    // Calculating the new control rotation by interpolating between current and target 
+    // Calculating the new control rotation by interpolating between current and target
     const FRotator NewControlRotation = FMath::Lerp(CharacterController->GetControlRotation(), ControlRotation, Value);
-    
+
     CharacterController->SetControlRotation(NewControlRotation);
 }

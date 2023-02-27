@@ -58,6 +58,7 @@ void AFPSCharacter::BeginPlay()
     if (MovementDataMap.Contains(EMovementState::State_Sprint))
     {
         GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[EMovementState::State_Sprint].MaxWalkSpeed;
+        UpdateMovementState(EMovementState::State_Sprint);
     }
     else
     {
@@ -155,10 +156,6 @@ void AFPSCharacter::ToggleCrouch()
         else
         {
             UpdateMovementState(EMovementState::State_Crouch);
-            // if (bWantsToSprint)
-            // {
-            //     bWantsToSprint = false;
-            // }
         }
     }
     else if (!bPerformedSlide)
@@ -229,7 +226,15 @@ void AFPSCharacter::StartSlide()
 {
     bPerformedSlide = true;
     UpdateMovementState(EMovementState::State_Slide);
-    GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::ReleaseCrouch, SlideTime, false, SlideTime);
+    GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::StopSlide, SlideTime, false, SlideTime);
+    GetWorldTimerManager().SetTimer(SlideTimeOutHandler, this, &AFPSCharacter::TimeOutSlide, SlideTimeOut, false, SlideTimeOut);
+    bCanSlide = false;
+}
+
+void AFPSCharacter::TimeOutSlide()
+{
+    bCanSlide = true;
+    GetWorldTimerManager().ClearTimer(SlideTimeOutHandler);
 }
 
 void AFPSCharacter::StopSlide()
@@ -252,12 +257,11 @@ void AFPSCharacter::StopSlide()
         {
             UpdateMovementState(EMovementState::State_Sprint);
         }
-        bPerformedSlide = false;
         GetWorldTimerManager().ClearTimer(SlideStop);
     }
     else if (FloorAngle < -SlideContinueAngle)
     {
-        GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::ReleaseCrouch, 0.1f, false, 0.1f);
+        GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::StopSlide, 0.1f, false, 0.1f);
     }
 }
 
@@ -600,11 +604,7 @@ void AFPSCharacter::Tick(const float DeltaTime)
     NewSpringArmLocation.Z = NewLocation;
     SpringArmComponent->SetRelativeLocation(NewSpringArmLocation);
 
-    // Set state to sprint every time walk is not pressed
-    if (!bWantsToWalk)
-    {
-        UpdateMovementState(EMovementState::State_Sprint);
-    }
+    // Set state to sprint every time walk and/or crouch is not pressed
 
     if (bRestrictSprintAngle)
     {

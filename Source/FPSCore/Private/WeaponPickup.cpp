@@ -15,13 +15,13 @@ AWeaponPickup::AWeaponPickup()
 
 	MagazineAttachment = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MagazineAttachment"));
 	MagazineAttachment->SetupAttachment(MeshComp);
-	
+
 	SightsAttachment = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SightsAttachment"));
 	SightsAttachment->SetupAttachment(MeshComp);
 
 	StockAttachment = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StockAttachment"));
 	StockAttachment->SetupAttachment(MeshComp);
-	
+
 	GripAttachment = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GripAttachment"));
 	GripAttachment->SetupAttachment(MeshComp);
 }
@@ -49,7 +49,7 @@ void AWeaponPickup::BeginPlay()
 }
 
 // Updating the appearance of the pickup in the editor
-void AWeaponPickup::OnConstruction(const FTransform& Transform)
+void AWeaponPickup::OnConstruction(const FTransform &Transform)
 {
 	Super::OnConstruction(Transform);
 
@@ -62,14 +62,13 @@ void AWeaponPickup::OnConstruction(const FTransform& Transform)
 	SpawnAttachmentMesh();
 }
 
-
 void AWeaponPickup::SpawnAttachmentMesh()
 {
 	// Getting a reference to our Weapon Data table in order to see if we have attachments
-	const AWeaponBase* WeaponBaseReference =  WeaponReference.GetDefaultObject();
+	const AWeaponBase *WeaponBaseReference = WeaponReference.GetDefaultObject();
 	if (WeaponDataTable && WeaponBaseReference)
 	{
-		if (const FStaticWeaponData* WeaponData = WeaponDataTable->FindRow<FStaticWeaponData>(FName(WeaponBaseReference->GetDataTableNameRef()), FString(WeaponBaseReference->GetDataTableNameRef()), true))
+		if (const FStaticWeaponData *WeaponData = WeaponDataTable->FindRow<FStaticWeaponData>(FName(WeaponBaseReference->GetDataTableNameRef()), FString(WeaponBaseReference->GetDataTableNameRef()), true))
 		{
 			// Spawning attachments if the weapon has them and the attachments table exists
 			if (WeaponData->bHasAttachments && AttachmentsDataTable)
@@ -78,7 +77,7 @@ void AWeaponPickup::SpawnAttachmentMesh()
 				for (FName RowName : DataStruct.WeaponAttachments)
 				{
 					// Searching the data table for the attachment
-					const FAttachmentData* AttachmentData = AttachmentsDataTable->FindRow<FAttachmentData>(RowName, RowName.ToString(), true);
+					const FAttachmentData *AttachmentData = AttachmentsDataTable->FindRow<FAttachmentData>(RowName, RowName.ToString(), true);
 
 					// Applying the effects of the attachment
 					if (AttachmentData)
@@ -132,7 +131,7 @@ void AWeaponPickup::SpawnAttachmentMesh()
 void AWeaponPickup::Interact()
 {
 	// Getting a reference to the Character Controller
-	const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 
 	if (PlayerCharacter->GetInventoryComponent())
 	{
@@ -151,8 +150,8 @@ void AWeaponPickup::Interact()
 		}
 
 		// Spawning the new weapon in the player's inventory component
-		PlayerCharacter->GetInventoryComponent()->UpdateWeapon(WeaponReference, InventoryPosition, SpawnPickup, bStatic, GetActorTransform(),  DataStruct);
-	
+		PlayerCharacter->GetInventoryComponent()->UpdateWeapon(WeaponReference, InventoryPosition, SpawnPickup, bStatic, GetActorTransform(), DataStruct);
+
 		// Destroying the pickup
 		Destroy();
 	}
