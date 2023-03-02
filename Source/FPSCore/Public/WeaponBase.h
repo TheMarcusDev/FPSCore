@@ -590,7 +590,7 @@ struct FStaticWeaponData : public FTableRowBase
 
 	/** particle effect to be spawned at the muzzle when a shot is fired */
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
-	UNiagaraSystem *MuzzleFlash;
+	UParticleSystem *MuzzleFlash;
 
 	/** particle effect to be spawned at the muzzle that shows the path of the bullet */
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
@@ -645,6 +645,9 @@ public:
 
 	/** Starts firing the gun (sets the timer for automatic fire) */
 	void StartFire();
+
+	/** Starts firing the gun (sets the timer for automatic fire) */
+	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation);
 
 	/** Stops the timer that allows for automatic fire */
 	void StopFire();
@@ -745,8 +748,14 @@ private:
 	/** Sets default values for this actor's properties */
 	AWeaponBase();
 
+	/** Setup for Fire function */
+	void FireInitialization();
+
 	/** Spawns the line trace that deals damage and applies sound/visual effects */
 	void Fire();
+
+	/** Finalizing Fire function */
+	void FireFinalization();
 
 	/** Applies recoil to the player controller */
 	void Recoil();
@@ -819,6 +828,14 @@ private:
 
 	FRuntimeWeaponData GeneralWeaponData;
 
+	/** collision parameters for spawning the line trace */
+	FCollisionQueryParams QueryParams;
+
+	/** Trace results */
+	FVector EndPoint;
+	FVector TraceDirection;
+	FVector TraceEnd;
+
 	/** Determines if the player can fire */
 	bool bCanFire = true;
 
@@ -860,12 +877,6 @@ private:
 
 	/** keeps track of the starting rotation of the line trace (required for calculating the trace end point) */
 	FRotator TraceStartRotation;
-
-	/** keeps track of the vector direction of the line trace (derived from rotation) */
-	FVector TraceDirection;
-
-	/** end point of the line trace */
-	FVector TraceEnd;
 
 	/** hit result variable set when a line trace is spawned */
 	UPROPERTY()

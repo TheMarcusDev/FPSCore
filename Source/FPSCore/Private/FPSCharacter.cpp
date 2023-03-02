@@ -55,14 +55,14 @@ void AFPSCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (MovementDataMap.Contains(EMovementState::State_Sprint))
+    if (MovementDataMap.Contains(EMovementState::State_Walk))
     {
         GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[EMovementState::State_Sprint].MaxWalkSpeed;
-        UpdateMovementState(EMovementState::State_Sprint);
+        UpdateMovementState(EMovementState::State_Idle);
     }
     else
     {
-        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap!"))
+        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap! BeginPlay"))
     }
 
     DefaultSpringArmOffset = SpringArmComponent->GetRelativeLocation().Z; // Setting the default location of the spring arm
@@ -179,7 +179,10 @@ void AFPSCharacter::ReleaseCrouch()
         {
             return;
         }
-        UpdateMovementState(EMovementState::State_Sprint);
+        else
+        {
+            UpdateMovementState(EMovementState::State_Sprint);
+        }
     }
 }
 
@@ -194,6 +197,23 @@ void AFPSCharacter::StopCrouch(const bool bToWalk)
         else
         {
             UpdateMovementState(EMovementState::State_Walk);
+        }
+    }
+}
+
+void AFPSCharacter::SprintCheck()
+{
+    if (!bWantsToWalk && !bIsVaulting && !bHoldingCrouch && !(GetCharacterMovement()->IsFalling()))
+    {
+        float ForwardVelocity = FVector::DotProduct(GetVelocity(), GetActorForwardVector());
+        float RightVelocity = FVector::DotProduct(GetVelocity(), GetActorRightVector());
+        if (ForwardVelocity != 0 || RightVelocity != 0)
+        {
+            UpdateMovementState(EMovementState::State_Sprint);
+        }
+        else
+        {
+            UpdateMovementState(EMovementState::State_Idle);
         }
     }
 }
@@ -226,6 +246,7 @@ void AFPSCharacter::StartSlide()
 {
     bPerformedSlide = true;
     UpdateMovementState(EMovementState::State_Slide);
+    HandsMeshComp->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
     GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::StopSlide, SlideTime, false, SlideTime);
     GetWorldTimerManager().SetTimer(SlideTimeOutHandler, this, &AFPSCharacter::TimeOutSlide, SlideTimeOut, false, SlideTimeOut);
     bCanSlide = false;
@@ -450,6 +471,10 @@ void AFPSCharacter::TimelineProgress(const float Value)
         {
             UpdateMovementState(EMovementState::State_Sprint);
         }
+        else
+        {
+            UpdateMovementState(EMovementState::State_Walk);
+        }
     }
 }
 
@@ -562,10 +587,6 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
         GetCharacterMovement()->GroundFriction = MovementDataMap[MovementState].GroundFriction;
         GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[MovementState].MaxWalkSpeed;
     }
-    else
-    {
-        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap!"))
-    }
 
     // Updating sprinting and crouching flags
     if (MovementState == EMovementState::State_Crouch)
@@ -603,8 +624,6 @@ void AFPSCharacter::Tick(const float DeltaTime)
     FVector NewSpringArmLocation = SpringArmComponent->GetRelativeLocation();
     NewSpringArmLocation.Z = NewLocation;
     SpringArmComponent->SetRelativeLocation(NewSpringArmLocation);
-
-    // Set state to sprint every time walk and/or crouch is not pressed
 
     if (bRestrictSprintAngle)
     {
@@ -645,7 +664,7 @@ void AFPSCharacter::Tick(const float DeltaTime)
     }
     else
     {
-        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap!"))
+        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap! Fov adjustments"))
     }
 
     // Continuous aiming check (so that you don't have to re-press the ADS button every time you jump/sprint/reload/etc)
@@ -670,6 +689,9 @@ void AFPSCharacter::Tick(const float DeltaTime)
 
     // Checks the floor angle to determine whether we should keep sliding or not
     CheckGroundAngle(DeltaTime);
+
+    // Check if player is Sprinting/Idle
+    SprintCheck();
 
     if (bDrawDebug)
     {
@@ -759,5 +781,37 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCompon
             PlayerEnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AFPSCharacter::ToggleCrouch);
             PlayerEnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AFPSCharacter::ReleaseCrouch);
         }
+        if (FiringAction)
+        {
+            // Firing
+            PlayerEnhancedInputComponent->BindAction(FiringAction, ETriggerEvent::Started, this, &AFPSCharacter::Fire);
+        }
     }
+}
+
+void AFPSCharacter::Fire()
+{
+    if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+    {
+        if (InventoryComponent->GetCurrentWeapon())
+        {
+            InventoryComponent->GetCurrentWeapon()->StartFire();
+        }
+    }
+    else
+    {
+        FVector ServerTraceStart = GetCameraComponent()->GetComponentLocation();
+        FRotator ServerTraceRotation = GetCameraComponent()->GetComponentRotation();
+        Server_Fire(ServerTraceStart, ServerTraceRotation);
+    };
+}
+
+bool AFPSCharacter::Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation)
+{
+    return true;
+}
+
+void AFPSCharacter::Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation)
+{
+    InventoryComponent->GetCurrentWeapon()->Server_Fire(GetCameraComponent()->GetComponentLocation(), GetCameraComponent()->GetComponentRotation());
 }

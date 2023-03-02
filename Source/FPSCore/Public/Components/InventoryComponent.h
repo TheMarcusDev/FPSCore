@@ -18,17 +18,17 @@ DECLARE_DYNAMIC_MULTICAST_SPARSE_DELEGATE(FFailedToReload, UInventoryComponent, 
 UENUM(BlueprintType)
 enum class EReloadFailedBehaviour : uint8
 {
-	Retry			UMETA(DisplayName = "Retry until successful"),
-	ChangeState		UMETA(DisplayName = "Change movement state to be able to successfuly reload"),
-	HandleInBP		UMETA(DisplayName = "Handle in Blueprint"),
-	Ignore			UMETA(DisplayName = "Ignore unsuccessful reload")
+	Retry UMETA(DisplayName = "Retry until successful"),
+	ChangeState UMETA(DisplayName = "Change movement state to be able to successfuly reload"),
+	HandleInBP UMETA(DisplayName = "Handle in Blueprint"),
+	Ignore UMETA(DisplayName = "Ignore unsuccessful reload")
 };
 
 UENUM(BlueprintType)
 enum class EWeaponSwapBehaviour : uint8
 {
-	UseNewValue		UMETA(DisplayName = "Swap to new value"),
-	Ignore			UMETA(DisplayName = "Ignore subsequent swaps")
+	UseNewValue UMETA(DisplayName = "Swap to new value"),
+	Ignore UMETA(DisplayName = "Ignore subsequent swaps")
 };
 
 USTRUCT()
@@ -38,11 +38,11 @@ struct FStarterWeaponData
 	TSubclassOf<AWeaponBase> WeaponClassRef;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Data Table")
-	UDataTable* WeaponDataTableRef;
+	UDataTable *WeaponDataTableRef;
 
 	/** Data table reference for attachments */
 	UPROPERTY(EditDefaultsOnly, Category = "Data Table")
-	UDataTable* AttachmentsDataTable;
+	UDataTable *AttachmentsDataTable;
 
 	/** Local weapon data struct to keep track of ammo amounts and weapon health */
 	UPROPERTY()
@@ -51,21 +51,21 @@ struct FStarterWeaponData
 	/** The array of attachments to spawn (usually inherited, can be set by instance) */
 	UPROPERTY(EditDefaultsOnly, Category = "Data Table")
 	TArray<FName> AttachmentArrayOverrideRef;
-	
+
 	GENERATED_BODY()
 };
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class FPSCORE_API UInventoryComponent final : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	/** Sets default values for this component's properties */
 	UInventoryComponent();
 
 	/** Called to bind functionality to input */
-	void SetupInputComponent(class UEnhancedInputComponent* PlayerInputComponent);
+	void SetupInputComponent(class UEnhancedInputComponent *PlayerInputComponent);
 
 	/** Equipping a new weapon
 	 * @param NewWeapon The new weapon which to spawn
@@ -74,9 +74,10 @@ public:
 	 * @param bStatic Whether the spawned pickup should be static or run a physics simulation
 	 * @param PickupTransform The position at which to spawn the new pickup, in the case that it is static (bStatic)
 	 * @param DataStruct The FRuntimeWeaponData struct for the newly equipped weapon
+	 * @param WeaponOwner The Player who owns the weapon
 	 */
 	void UpdateWeapon(TSubclassOf<AWeaponBase> NewWeapon, int InventoryPosition, bool bSpawnPickup,
-						  bool bStatic, FTransform PickupTransform, FRuntimeWeaponData DataStruct);
+					  bool bStatic, FTransform PickupTransform, FRuntimeWeaponData DataStruct);
 
 	/** Returns the number of weapon slots */
 	int GetNumberOfWeaponSlots() const { return NumberOfWeaponSlots; }
@@ -85,17 +86,17 @@ public:
 	int GetCurrentWeaponSlot() const { return CurrentWeaponSlot; }
 
 	/** Returns the map of currently equipped weapons */
-	TMap<int, AWeaponBase*> GetEquippedWeapons() const { return EquippedWeapons; }
-	
+	TMap<int, AWeaponBase *> GetEquippedWeapons() const { return EquippedWeapons; }
+
 	/** Returns an equipped weapon
 	 *	@param WeaponID The ID of the weapon to get
 	 *	@return The weapon with the given ID
 	 */
-	AWeaponBase* GetWeaponByID(const int WeaponID) const { return EquippedWeapons[WeaponID]; }
+	AWeaponBase *GetWeaponByID(const int WeaponID) const { return EquippedWeapons[WeaponID]; }
 
 	/** Returns the current weapon equipped by the player */
 	UFUNCTION(BlueprintCallable, Category = "Inventory Component")
-	AWeaponBase* GetCurrentWeapon() const {return CurrentWeapon; }
+	AWeaponBase *GetCurrentWeapon() const { return CurrentWeapon; }
 
 	/**  Returns the amount of ammunition currently loaded into the weapon */
 	UFUNCTION(BlueprintCallable, Category = "Inventory Component")
@@ -107,7 +108,7 @@ public:
 		}
 		UE_LOG(LogProfilingDebugging, Log, TEXT("Cannot find Current Weapon"));
 		return FText::FromString("0");
-	} 
+	}
 
 	/** Returns the amount of ammunition remaining for the current weapon */
 	UFUNCTION(BlueprintCallable, Category = "Inventory Component")
@@ -125,7 +126,7 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory Component")
-	UTexture2D* GetCurrentWeaponDisplayImage() const
+	UTexture2D *GetCurrentWeaponDisplayImage() const
 	{
 		if (CurrentWeapon != nullptr)
 		{
@@ -134,7 +135,7 @@ public:
 		UE_LOG(LogProfilingDebugging, Log, TEXT("Cannot find Current Weapon"));
 		return nullptr;
 	}
-	
+
 	UPROPERTY(BlueprintAssignable, Category = "Inventory Component")
 	FHitActor EventHitActor;
 
@@ -143,25 +144,24 @@ public:
 
 	/** The input actions implemented by this component */
 	UPROPERTY()
-	UInputAction* FiringAction;
+	UInputAction *FiringAction;
 
 	UPROPERTY()
-	UInputAction* PrimaryWeaponAction;
+	UInputAction *PrimaryWeaponAction;
 
 	UPROPERTY()
-	UInputAction* SecondaryWeaponAction;
+	UInputAction *SecondaryWeaponAction;
 
 	UPROPERTY()
-	UInputAction* ReloadAction;
-	
-	UPROPERTY()
-	UInputAction* ScrollAction;
+	UInputAction *ReloadAction;
 
 	UPROPERTY()
-	UInputAction* InspectWeaponAction;
+	UInputAction *ScrollAction;
+
+	UPROPERTY()
+	UInputAction *InspectWeaponAction;
 
 private:
-
 	/** Spawns starter weapons */
 	virtual void BeginPlay() override;
 
@@ -175,12 +175,9 @@ private:
 	/**	Template function for SwapWeapon (used with the enhanced input component) */
 	template <int SlotID>
 	void SwapWeapon() { SwapWeapon(SlotID); }
-	
-	/** Swaps between weapons using the scroll wheel */
-	void ScrollWeapon(const FInputActionValue& Value);
 
-	/** Fires the weapon */
-	void StartFire();
+	/** Swaps between weapons using the scroll wheel */
+	void ScrollWeapon(const FInputActionValue &Value);
 
 	/** Stops firing the weapon */
 	void StopFire();
@@ -212,7 +209,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapons | Behaviour")
 	EWeaponSwapBehaviour WeaponSwapBehaviour = EWeaponSwapBehaviour::UseNewValue;
-	
+
 	/** The integer that keeps track of which weapon slot ID is currently active */
 	int CurrentWeaponSlot;
 
@@ -223,11 +220,11 @@ private:
 
 	/** A Map storing the player's current weapons and the slot that they correspond to */
 	UPROPERTY()
-	TMap<int, AWeaponBase*> EquippedWeapons;
+	TMap<int, AWeaponBase *> EquippedWeapons;
 
 	/** The player's currently equipped weapon */
 	UPROPERTY()
-	AWeaponBase* CurrentWeapon;
+	AWeaponBase *CurrentWeapon;
 
 	FTimerHandle ReloadRetry;
 

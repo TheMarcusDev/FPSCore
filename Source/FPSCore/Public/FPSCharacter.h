@@ -25,6 +25,7 @@ class UBlendSpace;
 UENUM(BlueprintType)
 enum class EMovementState : uint8
 {
+	State_Idle UMETA(DisplayName = "Idle"),
 	State_Walk UMETA(DisplayName = "Walking"),
 	State_Sprint UMETA(DisplayName = "Sprinting"),
 	State_Crouch UMETA(DisplayName = "Crouching"),
@@ -63,6 +64,9 @@ class FPSCORE_API AFPSCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
+	/** Calling Fire Function */
+	void Fire();
+
 	/** Returns the character's forward movement (from 0 to 1) */
 	UFUNCTION(BlueprintCallable, Category = "FPS Character")
 	float GetForwardMovement() const { return ForwardMovement; }
@@ -162,6 +166,12 @@ public:
 	void UpdateMovementState(EMovementState NewMovementState);
 
 protected:
+	/** Calling RCP of firing function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation);
+	bool Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation);
+	void Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation);
+
 	/** The character's FPS camera component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Components")
 	UCameraComponent *CameraComponent;
@@ -202,6 +212,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Montages")
 	UAnimMontage *VaultMontage;
 
+	/** Slide montage */
+	UPROPERTY(EditDefaultsOnly, Category = "Animations | Montages")
+	UAnimMontage *SlideMontage;
+
 private:
 #pragma region FUNCTIONS
 
@@ -232,6 +246,9 @@ private:
 
 	/** Stopping to walk */
 	void StopWalk();
+
+	/** Starting to Sprint */
+	void SprintCheck();
 
 	/** Starting to slide */
 	void StartSlide();
@@ -402,25 +419,25 @@ private:
 	bool bIsAiming;
 
 	/** Whether we are currently vaulting or not */
-	bool bIsVaulting;
+	bool bIsVaulting = false;
 
 	/** Whether the player is holding the crouch button */
-	bool bHoldingCrouch;
+	bool bHoldingCrouch = false;
 
 	/** Whether the character has performed a slide yet? */
 	bool bPerformedSlide = false;
 
 	/** Whether the player wants to slide (is holding the crouch/slide key, but not on the ground) */
-	bool bWantsToSlide;
+	bool bWantsToSlide = false;
+
+	/** Whether the character is walking */
+	bool bIsWalking = false;
 
 	/** Whether the character is sprinting */
 	bool bIsSprinting;
 
-	/** Whether the character is walking */
-	bool bIsWalking;
-
 	/** Whether the character is crouching */
-	bool bIsCrouching;
+	bool bIsCrouching = false;
 
 	/** The start location of a vaulting or mantle */
 	FTransform VaultStartLocation;
