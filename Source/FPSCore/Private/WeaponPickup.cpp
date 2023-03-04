@@ -131,7 +131,7 @@ void AWeaponPickup::SpawnAttachmentMesh()
 void AWeaponPickup::Interact()
 {
 	// Getting a reference to the Character Controller
-	const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
 
 	if (PlayerCharacter->GetInventoryComponent())
 	{

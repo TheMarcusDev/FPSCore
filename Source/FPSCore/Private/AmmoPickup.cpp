@@ -23,21 +23,21 @@ void AAmmoPickup::BeginPlay()
 	Super::BeginPlay();
 
 	// Updating MeshComp with the desired mesh if it exists
-    if (AmmoData.Contains(AmmoType))
-    {
-        if (AmmoData[AmmoType].FullAmmoBoxes.Contains(AmmoAmount))
-        {
-            MeshComp->SetStaticMesh(AmmoData[AmmoType].FullAmmoBoxes[AmmoAmount]);
-        	if (AmmoData[AmmoType].PickupName.ToString() != TEXT(""))
-        	{
-        		InteractionText = AmmoData[AmmoType].PickupName;
-        	}
-            else
-            {
-        		InteractionText = PickupName[AmmoType];
-            	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Please note that defining pickup names with the PickupName map is now deprecated, and will be removed soon. Please define pickup names inside the AmmoData data structure."));
-            }
-        }
+	if (AmmoData.Contains(AmmoType))
+	{
+		if (AmmoData[AmmoType].FullAmmoBoxes.Contains(AmmoAmount))
+		{
+			MeshComp->SetStaticMesh(AmmoData[AmmoType].FullAmmoBoxes[AmmoAmount]);
+			if (AmmoData[AmmoType].PickupName.ToString() != TEXT(""))
+			{
+				InteractionText = AmmoData[AmmoType].PickupName;
+			}
+			else
+			{
+				InteractionText = PickupName[AmmoType];
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Please note that defining pickup names with the PickupName map is now deprecated, and will be removed soon. Please define pickup names inside the AmmoData data structure."));
+			}
+		}
 	}
 	else
 	{
@@ -49,9 +49,8 @@ void AAmmoPickup::Interact()
 {
 	if (!bIsEmpty)
 	{
-		const AFPSCharacter* PlayerCharacter = Cast<AFPSCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-		AFPSCharacterController* CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
-
+		const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+		AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
 		// Debug print of the ammo before pickup
 		if (bDrawDebug)
@@ -81,7 +80,7 @@ void AAmmoPickup::Interact()
 	}
 }
 
-void AAmmoPickup::OnConstruction(const FTransform& Transform)
+void AAmmoPickup::OnConstruction(const FTransform &Transform)
 {
 	Super::OnConstruction(Transform);
 
@@ -116,4 +115,3 @@ void AAmmoPickup::SetEmptyMesh()
 	}
 	bIsEmpty = true;
 }
-

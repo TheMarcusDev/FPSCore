@@ -64,9 +64,6 @@ class FPSCORE_API AFPSCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	/** Calling Fire Function */
-	void Fire();
-
 	/** Returns the character's forward movement (from 0 to 1) */
 	UFUNCTION(BlueprintCallable, Category = "FPS Character")
 	float GetForwardMovement() const { return ForwardMovement; }
@@ -166,11 +163,23 @@ public:
 	void UpdateMovementState(EMovementState NewMovementState);
 
 protected:
-	/** Calling RCP of firing function */
+	/** Calling Fire Function */
+	void Fire();
+
+	/** Calling Reload Function */
+	void Reload();
+
+	/** Calling RPC of firing function */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation);
-	bool Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation);
-	void Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation);
+	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
+	bool Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
+	void Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
+
+	/** Calling RPC of reloading function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_Reload(class AFPSCharacter* ShootingPlayer);
+	bool Server_Reload_Validate(class AFPSCharacter* ShootingPlayer);
+	void Server_Reload_Implementation(class AFPSCharacter* ShootingPlayer);
 
 	/** The character's FPS camera component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Components")

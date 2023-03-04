@@ -786,6 +786,11 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCompon
             // Firing
             PlayerEnhancedInputComponent->BindAction(FiringAction, ETriggerEvent::Started, this, &AFPSCharacter::Fire);
         }
+        if (ReloadAction)
+        {
+            // Reloading
+            PlayerEnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AFPSCharacter::Reload);
+        }
     }
 }
 
@@ -800,18 +805,53 @@ void AFPSCharacter::Fire()
     }
     else
     {
-        FVector ServerTraceStart = GetCameraComponent()->GetComponentLocation();
-        FRotator ServerTraceRotation = GetCameraComponent()->GetComponentRotation();
-        Server_Fire(ServerTraceStart, ServerTraceRotation);
-    };
+        if (InventoryComponent->GetCurrentWeapon())
+        {
+            InventoryComponent->GetCurrentWeapon()->SetOwner(GetController());
+            InventoryComponent->GetCurrentWeapon()->SetRole(GetLocalRole());
+            FVector ServerTraceStart = GetCameraComponent()->GetComponentLocation();
+            FRotator ServerTraceRotation = GetCameraComponent()->GetComponentRotation();
+            Server_Fire(ServerTraceStart, ServerTraceRotation, GetController());
+        }
+    }
 }
 
-bool AFPSCharacter::Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation)
+bool AFPSCharacter::Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController)
 {
     return true;
 }
 
-void AFPSCharacter::Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation)
+void AFPSCharacter::Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController)
 {
-    InventoryComponent->GetCurrentWeapon()->Server_Fire(GetCameraComponent()->GetComponentLocation(), GetCameraComponent()->GetComponentRotation());
+    InventoryComponent->GetCurrentWeapon()->Server_Fire(GetCameraComponent()->GetComponentLocation(), GetCameraComponent()->GetComponentRotation(), GetController());
+}
+
+void AFPSCharacter::Reload()
+{
+    if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+    {
+        if (InventoryComponent->GetCurrentWeapon())
+        {
+            InventoryComponent->GetCurrentWeapon()->Reload();
+        }
+    }
+    else
+    {
+        if (InventoryComponent->GetCurrentWeapon())
+        {
+            InventoryComponent->GetCurrentWeapon()->SetOwner(GetController());
+            InventoryComponent->GetCurrentWeapon()->SetRole(GetLocalRole());
+            Server_Reload(this);
+        }
+    }
+}
+
+bool AFPSCharacter::Server_Reload_Validate(AFPSCharacter* ShootingPlayer)
+{
+    return true;
+}
+
+void AFPSCharacter::Server_Reload_Implementation(AFPSCharacter* ShootingPlayer)
+{
+    InventoryComponent->GetCurrentWeapon()->Server_Reload(this);
 }

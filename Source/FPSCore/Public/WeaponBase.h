@@ -647,13 +647,16 @@ public:
 	void StartFire();
 
 	/** Starts firing the gun (sets the timer for automatic fire) */
-	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation);
+	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
 
 	/** Stops the timer that allows for automatic fire */
 	void StopFire();
 
 	/** Plays the reload animation and sets a timer based on the length of the reload montage */
 	bool Reload();
+
+	/** Plays the reload animation and sets a timer based on the length of the reload montage */
+	bool Server_Reload(class AFPSCharacter* ShootingPlayer);
 
 	/** Spawns the weapons attachments and applies their data/modifications to the weapon's statistics */
 	void SpawnAttachments();
@@ -717,7 +720,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon Base")
 	float GetVerticalCameraOffset() const { return VerticalCameraOffset; }
 
+	/** RPC of the firing function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_StartFire();
+	bool Server_StartFire_Validate();
+	void Server_StartFire_Implementation();
+
+	/** RPC of the stop fire function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_StopFire();
+	bool Server_StopFire_Validate();
+	void Server_StopFire_Implementation();
+
 protected:
+	/** Multicast of the firing function */
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void Multi_Fire();
+	bool Multi_Fire_Validate();
+	void Multi_Fire_Implementation();
+
 	/** The main skeletal mesh - holds the weapon model */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent *MeshComp;
@@ -755,7 +776,7 @@ private:
 	void Fire();
 
 	/** Finalizing Fire function */
-	void FireFinalization();
+	void FireFinal();
 
 	/** Applies recoil to the player controller */
 	void Recoil();

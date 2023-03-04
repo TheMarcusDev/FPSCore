@@ -161,6 +161,9 @@ public:
 	UPROPERTY()
 	UInputAction *InspectWeaponAction;
 
+	/** Reloads the weapon */
+	void Reload();
+
 private:
 	/** Spawns starter weapons */
 	virtual void BeginPlay() override;
@@ -181,9 +184,6 @@ private:
 
 	/** Stops firing the weapon */
 	void StopFire();
-
-	/** Reloads the weapon */
-	void Reload();
 
 	/** Plays an inspect animation on the weapon */
 	void Inspect();

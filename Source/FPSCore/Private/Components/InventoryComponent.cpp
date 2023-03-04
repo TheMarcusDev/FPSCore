@@ -140,7 +140,15 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 	{
 		CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
 		CurrentWeapon->SetActorHiddenInGame(true);
-		CurrentWeapon->StopFire();
+		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+		{
+			CurrentWeapon->StopFire();
+		}
+		else
+		{
+			CurrentWeapon->SetRole(ROLE_SimulatedProxy);
+			CurrentWeapon->Server_StopFire();
+		}
 	}
 
 	// Swapping to the new weapon, enabling it and playing it's equip animation
@@ -252,7 +260,6 @@ FText UInventoryComponent::GetCurrentWeaponRemainingAmmo() const
 	if (const AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
 	{
 		AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(FPSCharacter->GetController());
-
 		if (CharacterController)
 		{
 			if (CurrentWeapon != nullptr)
@@ -274,53 +281,63 @@ void UInventoryComponent::StopFire()
 {
 	if (CurrentWeapon)
 	{
-		CurrentWeapon->StopFire();
+		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+		{
+			CurrentWeapon->StopFire();
+		}
+		else
+		{
+			CurrentWeapon->SetRole(ROLE_SimulatedProxy);
+			CurrentWeapon->Server_StopFire();
+		}
 	}
 }
 
 // Passing player inputs to WeaponBase
-void UInventoryComponent::Reload()
-{
-	if (CurrentWeapon)
-	{
-		if (!CurrentWeapon->Reload())
-		{
-			switch (ReloadFailedBehaviour)
-			{
-			case EReloadFailedBehaviour::Retry:
-			{
-				GetWorld()->GetTimerManager().SetTimer(ReloadRetry, this, &UInventoryComponent::Reload, 0.1f, false, 0.1f);
-				break;
-			}
+// void UInventoryComponent::Reload()
+// {
+// 	if (CurrentWeapon)
+// 	{
+// 		AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner());
+// 		AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(FPSCharacter->GetController());
+// 		if (!CurrentWeapon->Reload())
+// 		{
+// switch (ReloadFailedBehaviour)
+// {
+// case EReloadFailedBehaviour::Retry:
+// {
+// 	GetWorld()->GetTimerManager().SetTimer(ReloadRetry, this, &UInventoryComponent::Reload, 0.1f, false, 0.1f);
+// 	break;
+// }
 
-			case EReloadFailedBehaviour::ChangeState:
-			{
-				AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner());
-				FPSCharacter->UpdateMovementState(EMovementState::State_Walk);
-				Reload();
-				break;
-			}
+// case EReloadFailedBehaviour::ChangeState:
+// {
+// 	FPSCharacter->UpdateMovementState(EMovementState::State_Walk);
+// 	Reload();
+// 	break;
+// }
 
-			case EReloadFailedBehaviour::HandleInBP:
-			{
-				EventFailedToReload.Broadcast();
-				break;
-			}
+// case EReloadFailedBehaviour::HandleInBP:
+// {
+// 	EventFailedToReload.Broadcast();
+// 	break;
+// }
 
-			case EReloadFailedBehaviour::Ignore:
-			{
-				// Ignoring it, obviously :)
-				break;
-			}
+// case EReloadFailedBehaviour::Ignore:
+// {
+// 	// Ignoring it, obviously :)
+// 	break;
+// }
 
-			default:
-			{
-				break;
-			}
-			}
-		}
-	}
-}
+// default:
+// {
+// break;
+// }
+// }
+// 			return;
+// 		}
+// 	}
+// }
 
 void UInventoryComponent::Inspect()
 {
@@ -375,12 +392,6 @@ void UInventoryComponent::SetupInputComponent(UEnhancedInputComponent *PlayerInp
 	{
 		// Switching to the secondary weapon
 		PlayerInputComponent->BindAction(SecondaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::SwapWeapon<1>);
-	}
-
-	if (ReloadAction)
-	{
-		// Reloading
-		PlayerInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &UInventoryComponent::Reload);
 	}
 
 	if (ScrollAction)
