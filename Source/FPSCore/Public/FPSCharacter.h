@@ -171,15 +171,15 @@ protected:
 
 	/** Calling RPC of firing function */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
-	bool Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
-	void Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
+	void Server_Fire();
+	bool Server_Fire_Validate();
+	void Server_Fire_Implementation();
 
 	/** Calling RPC of reloading function */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_Reload(class AFPSCharacter* ShootingPlayer);
-	bool Server_Reload_Validate(class AFPSCharacter* ShootingPlayer);
-	void Server_Reload_Implementation(class AFPSCharacter* ShootingPlayer);
+	void Server_Reload();
+	bool Server_Reload_Validate();
+	void Server_Reload_Implementation();
 
 	/** The character's FPS camera component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Components")

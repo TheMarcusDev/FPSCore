@@ -293,52 +293,6 @@ void UInventoryComponent::StopFire()
 	}
 }
 
-// Passing player inputs to WeaponBase
-// void UInventoryComponent::Reload()
-// {
-// 	if (CurrentWeapon)
-// 	{
-// 		AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner());
-// 		AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(FPSCharacter->GetController());
-// 		if (!CurrentWeapon->Reload())
-// 		{
-// switch (ReloadFailedBehaviour)
-// {
-// case EReloadFailedBehaviour::Retry:
-// {
-// 	GetWorld()->GetTimerManager().SetTimer(ReloadRetry, this, &UInventoryComponent::Reload, 0.1f, false, 0.1f);
-// 	break;
-// }
-
-// case EReloadFailedBehaviour::ChangeState:
-// {
-// 	FPSCharacter->UpdateMovementState(EMovementState::State_Walk);
-// 	Reload();
-// 	break;
-// }
-
-// case EReloadFailedBehaviour::HandleInBP:
-// {
-// 	EventFailedToReload.Broadcast();
-// 	break;
-// }
-
-// case EReloadFailedBehaviour::Ignore:
-// {
-// 	// Ignoring it, obviously :)
-// 	break;
-// }
-
-// default:
-// {
-// break;
-// }
-// }
-// 			return;
-// 		}
-// 	}
-// }
-
 void UInventoryComponent::Inspect()
 {
 	if (CurrentWeapon)

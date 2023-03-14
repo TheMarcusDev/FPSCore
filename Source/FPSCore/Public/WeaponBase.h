@@ -646,17 +646,14 @@ public:
 	/** Starts firing the gun (sets the timer for automatic fire) */
 	void StartFire();
 
-	/** Starts firing the gun (sets the timer for automatic fire) */
-	void Server_Fire(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController);
+	/** Fire FP Animations */
+	void Server_Fire_FPAnim();
 
 	/** Stops the timer that allows for automatic fire */
 	void StopFire();
 
 	/** Plays the reload animation and sets a timer based on the length of the reload montage */
 	bool Reload();
-
-	/** Plays the reload animation and sets a timer based on the length of the reload montage */
-	bool Server_Reload(class AFPSCharacter* ShootingPlayer);
 
 	/** Spawns the weapons attachments and applies their data/modifications to the weapon's statistics */
 	void SpawnAttachments();
@@ -720,12 +717,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon Base")
 	float GetVerticalCameraOffset() const { return VerticalCameraOffset; }
 
-	/** RPC of the firing function */
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_StartFire();
-	bool Server_StartFire_Validate();
-	void Server_StartFire_Implementation();
-
 	/** RPC of the stop fire function */
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_StopFire();
@@ -769,14 +760,8 @@ private:
 	/** Sets default values for this actor's properties */
 	AWeaponBase();
 
-	/** Setup for Fire function */
-	void FireInitialization();
-
 	/** Spawns the line trace that deals damage and applies sound/visual effects */
 	void Fire();
-
-	/** Finalizing Fire function */
-	void FireFinal();
 
 	/** Applies recoil to the player controller */
 	void Recoil();

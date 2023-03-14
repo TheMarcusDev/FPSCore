@@ -807,23 +807,19 @@ void AFPSCharacter::Fire()
     {
         if (InventoryComponent->GetCurrentWeapon())
         {
-            InventoryComponent->GetCurrentWeapon()->SetOwner(GetController());
-            InventoryComponent->GetCurrentWeapon()->SetRole(GetLocalRole());
-            FVector ServerTraceStart = GetCameraComponent()->GetComponentLocation();
-            FRotator ServerTraceRotation = GetCameraComponent()->GetComponentRotation();
-            Server_Fire(ServerTraceStart, ServerTraceRotation, GetController());
+            Server_Fire();
         }
     }
 }
 
-bool AFPSCharacter::Server_Fire_Validate(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController)
+bool AFPSCharacter::Server_Fire_Validate()
 {
     return true;
 }
 
-void AFPSCharacter::Server_Fire_Implementation(FVector ServerTraceStart, FRotator ServerTraceRotation, AController *ServerController)
+void AFPSCharacter::Server_Fire_Implementation()
 {
-    InventoryComponent->GetCurrentWeapon()->Server_Fire(GetCameraComponent()->GetComponentLocation(), GetCameraComponent()->GetComponentRotation(), GetController());
+    InventoryComponent->GetCurrentWeapon()->StartFire();
 }
 
 void AFPSCharacter::Reload()
@@ -841,17 +837,17 @@ void AFPSCharacter::Reload()
         {
             InventoryComponent->GetCurrentWeapon()->SetOwner(GetController());
             InventoryComponent->GetCurrentWeapon()->SetRole(GetLocalRole());
-            Server_Reload(this);
+            Server_Reload();
         }
     }
 }
 
-bool AFPSCharacter::Server_Reload_Validate(AFPSCharacter* ShootingPlayer)
+bool AFPSCharacter::Server_Reload_Validate()
 {
     return true;
 }
 
-void AFPSCharacter::Server_Reload_Implementation(AFPSCharacter* ShootingPlayer)
+void AFPSCharacter::Server_Reload_Implementation()
 {
-    InventoryComponent->GetCurrentWeapon()->Server_Reload(this);
+    InventoryComponent->GetCurrentWeapon()->Reload();
 }
