@@ -247,8 +247,8 @@ void AWeaponBase::StartFire()
 
 void AWeaponBase::StartRecoil()
 {
-    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
-    const AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     if (bCanFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading && CharacterController)
     {
@@ -306,7 +306,7 @@ void AWeaponBase::Fire()
     if (bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
     {
         // Casting to the player character
-        const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+        AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
 
         // Printing debug strings
         if (bShowDebug)
@@ -405,9 +405,7 @@ void AWeaponBase::Fire()
                 AActor *HitActor = Hit.GetActor();
 
                 // Applying the previously set damage to the hit actor
-                AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
-                UGameplayStatics::ApplyPointDamage(HitActor, FinalDamage, TraceDirection, Hit,
-                                                   CharacterController, this, DamageType);
+                UGameplayStatics::ApplyPointDamage(HitActor, FinalDamage, TraceDirection, Hit, GetOwner()->GetInstigatorController(), this, DamageType);
 
                 EndPoint = Hit.Location;
 
@@ -519,7 +517,7 @@ void AWeaponBase::Multi_Fire_Implementation()
     {
         UE_LOG(LogProfilingDebugging, Error, TEXT("Multi called"))
         // Casting to the player character
-        const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+        AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
 
         const int NumberOfShots = WeaponData.bIsShotgun ? WeaponData.ShotgunPellets : 1;
         // We run this for the number of bullets/projectiles per shot, in order to support shotguns
@@ -605,7 +603,7 @@ void AWeaponBase::Multi_Fire_Implementation()
 
 void AWeaponBase::Recoil()
 {
-    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
     AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // Apply recoil by adding a pitch and yaw input to the character controller
@@ -647,7 +645,7 @@ bool AWeaponBase::Reload()
     }
 
     // Casting to the character controller (which stores all the ammunition and health variables)
-    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
     AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // Checking if we are not reloading, if a reloading montage exists, and if there is any point in reloading
@@ -715,7 +713,7 @@ void AWeaponBase::UpdateAmmo()
     }
 
     // Casting to the game instance (which stores all the ammunition and health variables)
-    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
     AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // value system to reload the correct amount of bullets if the weapon is using a chambered reloading system
@@ -793,7 +791,7 @@ void AWeaponBase::Tick(float DeltaTime)
 void AWeaponBase::HandleRecoveryProgress(float Value) const
 {
     // Getting a reference to the Character Controller
-    const AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
     AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // Calculating the new control rotation by interpolating between current and target

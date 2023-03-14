@@ -128,18 +128,22 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 	{
 		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
 		{
+			CurrentWeapon->StopFire();
+			CurrentWeapon->SetCanFire(false);
 			bPerformingWeaponSwap = true;
 			TargetWeaponSlot = SlotId;
 			HandleUnequip();
 			return;
 		}
 	}
+	CurrentWeaponSlot = SlotId;
 
 	// Disabling the currently equipped weapon, if it exists
 	if (CurrentWeapon)
 	{
 		CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
 		CurrentWeapon->SetActorHiddenInGame(true);
+		CurrentWeapon->SetCanFire(true);
 		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
 		{
 			CurrentWeapon->StopFire();
@@ -297,11 +301,14 @@ void UInventoryComponent::Inspect()
 {
 	if (CurrentWeapon)
 	{
-		if (CurrentWeapon->GetStaticWeaponData()->WeaponInspect && CurrentWeapon->GetStaticWeaponData()->HandsInspect)
+		if (const AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
 		{
-			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+			if (CurrentWeapon->GetStaticWeaponData()->HandsInspect)
 			{
 				FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->HandsInspect, 1.0f);
+			}
+			if (CurrentWeapon->GetStaticWeaponData()->WeaponInspect)
+			{
 				CurrentWeapon->GetMainMeshComp()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponInspect, 1.0f);
 			}
 		}
@@ -314,9 +321,9 @@ void UInventoryComponent::HandleUnequip()
 	{
 		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
 		{
-			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+			if (const AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
 			{
-				float AnimTime = FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponUnequip, 1.0f);
+				const float AnimTime = FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponUnequip, 1.0f);
 				GetWorld()->GetTimerManager().SetTimer(WeaponSwapDelegate, this, &UInventoryComponent::UnequipReturn, AnimTime, false, AnimTime);
 			}
 		}
