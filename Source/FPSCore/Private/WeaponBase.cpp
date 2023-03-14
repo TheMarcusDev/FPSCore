@@ -302,6 +302,7 @@ void AWeaponBase::Server_StopFire_Implementation()
 
 void AWeaponBase::Fire()
 {
+    GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Blue, FString::FromInt(GeneralWeaponData.ClipSize), true);
     // Allowing the gun to fire if it has ammunition, is not reloading and the bCanFire variable is true
     if (bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
     {
@@ -341,24 +342,6 @@ void AWeaponBase::Fire()
             // Applying Recoil to the weapon
             Recoil();
 
-            // Playing an animation on the weapon mesh
-            if (WeaponData.Gun_Shot)
-            {
-                MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
-                if (WeaponData.bWaitForAnim)
-                {
-                    // Preventing the player from firing the weapon until the animation finishes playing
-                    const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
-                    bCanFire = false;
-                    GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
-                }
-            }
-
-            if (WeaponData.Player_Shot)
-            {
-                AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
-            }
-
             EndPoint = TraceEnd;
 
             // Sets the default values for our trace query
@@ -366,10 +349,7 @@ void AWeaponBase::Fire()
             QueryParams.AddIgnoredActor(PlayerCharacter);
             QueryParams.bTraceComplex = true;
             QueryParams.bReturnPhysicalMaterial = true;
-        }
-        // We run this for the number of bullets/projectiles per shot, in order to support shotguns
-        for (int i = 0; i < NumberOfShots; i++)
-        {
+
             // Drawing a line trace based on the parameters calculated previously
             if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_GameTraceChannel1, QueryParams))
             {
@@ -437,6 +417,56 @@ void AWeaponBase::Fire()
                 }
             }
         }
+        if (!WeaponData.bAutomaticFire)
+        {
+            VerticalRecoilTimeline.Stop();
+            HorizontalRecoilTimeline.Stop();
+            RecoilRecovery();
+        }
+        Multi_Fire();
+        bHasFiredRecently = true;
+    }
+    else if (bCanFire && !bIsReloading)
+    {
+        Multi_Fire_NoBullets();
+    }
+}
+
+bool AWeaponBase::Multi_Fire_Validate()
+{
+    return true;
+}
+void AWeaponBase::Multi_Fire_Implementation()
+{
+    // GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Black, FString::Printf(TEXT("bCanFire: %s"), bCanFire ? TEXT("true") : TEXT("false")));
+
+    // Casting to the player character
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+
+    const int NumberOfShots = WeaponData.bIsShotgun ? WeaponData.ShotgunPellets : 1;
+    // We run this for the number of bullets/projectiles per shot, in order to support shotguns
+    for (int i = 0; i < NumberOfShots; i++)
+    {
+        // Playing an animation on the weapon mesh
+        if (WeaponData.Gun_Shot)
+        {
+            MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+            if (WeaponData.bWaitForAnim)
+            {
+                // Preventing the player from firing the weapon until the animation finishes playing
+                const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
+                bCanFire = false;
+                GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
+            }
+        }
+
+        if (WeaponData.Player_Shot)
+        {
+            AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
+        }
+
+        EndPoint = Hit.Location;
+
         const FRotator ParticleRotation = (EndPoint - (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation))).Rotation();
 
         // Spawning the bullet trace particle effect
@@ -467,138 +497,35 @@ void AWeaponBase::Fire()
         {
             UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.DefaultHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
         }
-
-        // Spawning the muzzle flash particle
-
-        // UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, MeshComp, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true, true);
-
-        // Spawning the firing sound
-        if (WeaponData.bSilenced)
-        {
-            UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.SilencedSound, TraceStart);
-        }
-        else
-        {
-            UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.FireSound, TraceStart);
-        }
-
-        FRotator EjectionSpawnVector = FRotator::ZeroRotator;
-        EjectionSpawnVector.Yaw = 270.0f;
-        UNiagaraFunctionLibrary::SpawnSystemAttached(EjectedCasing, MagazineAttachment, FName("ejection_port"), FVector::ZeroVector, EjectionSpawnVector, EAttachLocation::SnapToTarget, true, true);
-
-        if (!WeaponData.bAutomaticFire)
-        {
-            VerticalRecoilTimeline.Stop();
-            HorizontalRecoilTimeline.Stop();
-            RecoilRecovery();
-        }
-
-        bHasFiredRecently = true;
     }
-    else if (bCanFire && !bIsReloading)
+    // Spawning the muzzle flash particle
+
+    // UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, MeshComp, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
+
+    // Spawning the firing sound
+    if (WeaponData.bSilenced)
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.EmptyFireSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
-        // Clearing the ShotDelay timer so that we don't have a constant ticking when the player has no ammo, just a single click
-        GetWorldTimerManager().ClearTimer(ShotDelay);
-
-        RecoilRecovery();
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.SilencedSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
     }
-    // Multi_Fire();
+    else
+    {
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.FireSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
+    }
+
+    FRotator EjectionSpawnVector = FRotator::ZeroRotator;
+    EjectionSpawnVector.Yaw = 270.0f;
+    UNiagaraFunctionLibrary::SpawnSystemAttached(EjectedCasing, MagazineAttachment, FName("ejection_port"), FVector::ZeroVector, EjectionSpawnVector, EAttachLocation::SnapToTarget, true, true);
 }
 
-bool AWeaponBase::Multi_Fire_Validate()
+bool AWeaponBase::Multi_Fire_NoBullets_Validate()
 {
     return true;
 }
-void AWeaponBase::Multi_Fire_Implementation()
+void AWeaponBase::Multi_Fire_NoBullets_Implementation()
 {
-
-    if (bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
-    {
-        UE_LOG(LogProfilingDebugging, Error, TEXT("Multi called"))
-        // Casting to the player character
-        AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
-
-        const int NumberOfShots = WeaponData.bIsShotgun ? WeaponData.ShotgunPellets : 1;
-        // We run this for the number of bullets/projectiles per shot, in order to support shotguns
-        for (int i = 0; i < NumberOfShots; i++)
-        {
-            // Playing an animation on the weapon mesh
-            if (WeaponData.Gun_Shot)
-            {
-                MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
-                if (WeaponData.bWaitForAnim)
-                {
-                    // Preventing the player from firing the weapon until the animation finishes playing
-                    const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
-                    bCanFire = false;
-                    GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
-                }
-            }
-
-            if (WeaponData.Player_Shot)
-            {
-                AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
-                UE_LOG(LogTemp, Warning, TEXT("PlayerCharacter is %s"), *PlayerCharacter->GetName());
-            }
-
-            const FRotator ParticleRotation = (EndPoint - (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation))).Rotation();
-
-            // Spawning the bullet trace particle effect
-            if (WeaponData.bHasAttachments)
-            {
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace, BarrelAttachment->GetSocketLocation(WeaponData.ParticleSpawnLocation), ParticleRotation);
-            }
-            else
-            {
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace, MeshComp->GetSocketLocation(WeaponData.ParticleSpawnLocation), ParticleRotation);
-            }
-
-            // Selecting the hit effect based on the hit physical surface material (hit.PhysMaterial.Get()) and spawning it (Niagara)
-
-            if (Hit.PhysMaterial.Get() == WeaponData.NormalDamageSurface || Hit.PhysMaterial.Get() == WeaponData.HeadshotDamageSurface)
-            {
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.EnemyHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-            }
-            else if (Hit.PhysMaterial.Get() == WeaponData.GroundSurface)
-            {
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.GroundHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-            }
-            else if (Hit.PhysMaterial.Get() == WeaponData.RockSurface)
-            {
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.RockHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-            }
-            else
-            {
-                UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.DefaultHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
-            }
-        }
-        // Spawning the muzzle flash particle
-
-        // UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, MeshComp, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true, true);
-
-        // Spawning the firing sound
-        if (WeaponData.bSilenced)
-        {
-            UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.SilencedSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
-        }
-        else
-        {
-            UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.FireSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
-        }
-
-        FRotator EjectionSpawnVector = FRotator::ZeroRotator;
-        EjectionSpawnVector.Yaw = 270.0f;
-        UNiagaraFunctionLibrary::SpawnSystemAttached(EjectedCasing, MagazineAttachment, FName("ejection_port"), FVector::ZeroVector, EjectionSpawnVector, EAttachLocation::SnapToTarget, true, true);
-    }
-    else if (bCanFire && !bIsReloading)
-    {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.EmptyFireSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
-        // Clearing the ShotDelay timer so that we don't have a constant ticking when the player has no ammo, just a single click
-        GetWorldTimerManager().ClearTimer(ShotDelay);
-
-        RecoilRecovery();
-    }
+    UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.EmptyFireSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
+    // Clearing the ShotDelay timer so that we don't have a constant ticking when the player has no ammo, just a single click
+    GetWorldTimerManager().ClearTimer(ShotDelay);
 }
 
 void AWeaponBase::Recoil()
@@ -654,33 +581,10 @@ bool AWeaponBase::Reload()
     {
         if (!bIsReloading && CharacterController->AmmoMap[GeneralWeaponData.AmmoType] > 0 && (GeneralWeaponData.ClipSize != (GeneralWeaponData.ClipCapacity + Value)))
         {
-            // Differentiating between having no ammunition in the magazine (having to chamber a round after reloading)
-            // or not, and playing an animation relevant to that
-            if (GeneralWeaponData.ClipSize <= 0 && WeaponData.EmptyPlayerReload)
+            Multi_Reload();
+            if (WeaponData.PlayerReload || WeaponData.EmptyPlayerReload)
             {
-                if (WeaponData.bHasAttachments)
-                {
-                    MagazineAttachment->PlayAnimation(WeaponData.EmptyWeaponReload, false);
-                }
-                else
-                {
-                    MeshComp->PlayAnimation(WeaponData.EmptyWeaponReload, false);
-                }
-                AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(
-                    WeaponData.EmptyPlayerReload, 1.0f);
-            }
-            else if (WeaponData.PlayerReload)
-            {
-                if (WeaponData.bHasAttachments)
-                {
-                    AnimTime = MagazineAttachment->GetAnimInstance()->Montage_Play(WeaponData.WeaponReload, 1.0f);
-                }
-                else
-                {
-                    MeshComp->PlayAnimation(WeaponData.WeaponReload, false);
-                }
-                AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(
-                    WeaponData.PlayerReload, 1.0f);
+                AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->GetCurrentActiveMontage()->GetPlayLength();
             }
             else
             {
@@ -702,6 +606,44 @@ bool AWeaponBase::Reload()
         }
     }
     return true;
+}
+
+bool AWeaponBase::Multi_Reload_Validate()
+{
+    return true;
+}
+
+void AWeaponBase::Multi_Reload_Implementation()
+{
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+
+    // Differentiating between having no ammunition in the magazine (having to chamber a round after reloading)
+    // or not, and playing an animation relevant to that
+    if (GeneralWeaponData.ClipSize <= 0 && WeaponData.EmptyPlayerReload)
+    {
+        if (WeaponData.bHasAttachments)
+        {
+            MagazineAttachment->PlayAnimation(WeaponData.EmptyWeaponReload, false);
+        }
+        else
+        {
+            MeshComp->PlayAnimation(WeaponData.EmptyWeaponReload, false);
+        }
+        PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.EmptyPlayerReload, 1.0f);
+    }
+    else if (WeaponData.PlayerReload)
+    {
+        if (WeaponData.bHasAttachments)
+        {
+            MagazineAttachment->GetAnimInstance()->Montage_Play(WeaponData.WeaponReload, 1.0f);
+        }
+        else
+        {
+            MeshComp->PlayAnimation(WeaponData.WeaponReload, false);
+        }
+        PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.PlayerReload, 1.0f);
+    }
 }
 
 void AWeaponBase::UpdateAmmo()

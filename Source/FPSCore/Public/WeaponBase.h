@@ -646,9 +646,6 @@ public:
 	/** Starts firing the gun (sets the timer for automatic fire) */
 	void StartFire();
 
-	/** Fire FP Animations */
-	void Server_Fire_FPAnim();
-
 	/** Stops the timer that allows for automatic fire */
 	void StopFire();
 
@@ -729,6 +726,18 @@ protected:
 	void Multi_Fire();
 	bool Multi_Fire_Validate();
 	void Multi_Fire_Implementation();
+
+	/** Multicast of the firing function with no bullets */
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void Multi_Fire_NoBullets();
+	bool Multi_Fire_NoBullets_Validate();
+	void Multi_Fire_NoBullets_Implementation();
+
+	/** Multicast of the Reload function */
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void Multi_Reload();
+	bool Multi_Reload_Validate();
+	void Multi_Reload_Implementation();
 
 	/** The main skeletal mesh - holds the weapon model */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
