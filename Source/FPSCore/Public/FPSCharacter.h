@@ -107,6 +107,12 @@ public:
 	/** Returns the character's hands mesh */
 	USkeletalMeshComponent *GetHandsMesh() const { return HandsMeshComp; }
 
+	/** Returns the character's third person mesh */
+	USkeletalMeshComponent *GetThirdPersonMesh() const { return ThirdPersonMesh; }
+
+	/** Returns the character's shadow mesh */
+	USkeletalMeshComponent *GetShadowMesh() const { return ShadowMesh; }
+
 	/** Returns a reference to the player's camera component */
 	UCameraComponent *GetCameraComponent() const { return CameraComponent; }
 
@@ -162,6 +168,9 @@ public:
 	 */
 	void UpdateMovementState(EMovementState NewMovementState);
 
+	/** Updating weapon */
+	void UpdateWeapon(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
+
 protected:
 	/** Calling Fire Function */
 	void Fire();
@@ -188,6 +197,14 @@ protected:
 	/** The character's hands mesh component */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent *HandsMeshComp;
+
+	/** The character's third person mesh component */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+	USkeletalMeshComponent *ThirdPersonMesh;
+
+	/** The character's third person mesh component */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+	USkeletalMeshComponent *ShadowMesh;
 
 	/** The spring arm component, which is required to enable 'use control rotation' */
 	UPROPERTY(EditDefaultsOnly, Category = "Components")

@@ -67,7 +67,7 @@ public:
 	/** Called to bind functionality to input */
 	void SetupInputComponent(class UEnhancedInputComponent *PlayerInputComponent);
 
-	/** Equipping a new weapon
+	/** Spawning a new weapon
 	 * @param NewWeapon The new weapon which to spawn
 	 * @param InventoryPosition The position in the player's inventory in which to place the weapon
 	 * @param bSpawnPickup Whether to spawn a pickup of CurrentWeapon (can be false if player has an empty weapon slot)
@@ -76,8 +76,11 @@ public:
 	 * @param DataStruct The FRuntimeWeaponData struct for the newly equipped weapon
 	 * @param WeaponOwner The Player who owns the weapon
 	 */
-	void UpdateWeapon(TSubclassOf<AWeaponBase> NewWeapon, int InventoryPosition, bool bSpawnPickup,
-					  bool bStatic, FTransform PickupTransform, FRuntimeWeaponData DataStruct);
+	void SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const int InventoryPosition, const bool bSpawnPickup,
+					 const bool bStatic, const FTransform PickupTransform, const FRuntimeWeaponData DataStruct);
+
+	/** Equipping a new weapon */
+	void UpdateWeapon(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
 
 	/** Returns the number of weapon slots */
 	int GetNumberOfWeaponSlots() const { return NumberOfWeaponSlots; }
@@ -164,6 +167,9 @@ public:
 	/** Reloads the weapon */
 	void Reload();
 
+	/** Starter Weapon Function */
+	void StarterWeapon();
+
 private:
 	/** Spawns starter weapons */
 	virtual void BeginPlay() override;
@@ -196,14 +202,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera | Interaction")
 	float WeaponSpawnDistance = 100.0f;
 
-	/** THe Number of slots for Weapons that this player has */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapons | Inventory")
-	int NumberOfWeaponSlots = 2;
-
-	/** An array of starter weapons. Only weapons within the range of NumberOfWeaponSlots will be spawned */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapons | Inventory")
-	TArray<FStarterWeaponData> StarterWeapons;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Weapons | Behaviour")
 	EReloadFailedBehaviour ReloadFailedBehaviour = EReloadFailedBehaviour::Ignore;
 
@@ -218,10 +216,6 @@ private:
 
 	bool bPerformingWeaponSwap;
 
-	/** A Map storing the player's current weapons and the slot that they correspond to */
-	UPROPERTY()
-	TMap<int, AWeaponBase *> EquippedWeapons;
-
 	/** The player's currently equipped weapon */
 	UPROPERTY()
 	AWeaponBase *CurrentWeapon;
@@ -229,4 +223,24 @@ private:
 	FTimerHandle ReloadRetry;
 
 	FTimerHandle WeaponSwapDelegate;
+
+protected:
+
+UFUNCTION(Server, Reliable, WithValidation)
+	void Server_UpdateWeapon(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
+	bool Server_UpdateWeapon_Validate(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
+	void Server_UpdateWeapon_Implementation(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
+
+public:
+	/** THe Number of slots for Weapons that this player has */
+	UPROPERTY(EditDefaultsOnly, Category = "Weapons | Inventory")
+	int NumberOfWeaponSlots = 2;
+
+	/** An array of starter weapons. Only weapons within the range of NumberOfWeaponSlots will be spawned */
+	UPROPERTY(EditDefaultsOnly, Category = "Weapons | Inventory")
+	TArray<FStarterWeaponData> StarterWeapons;
+
+	/** A Map storing the player's current weapons and the slot that they correspond to */
+	UPROPERTY()
+	TMap<int, AWeaponBase *> EquippedWeapons;
 };

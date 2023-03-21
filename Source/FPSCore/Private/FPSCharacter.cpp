@@ -38,7 +38,22 @@ AFPSCharacter::AFPSCharacter()
     // Spawning the FPS hands mesh component and attaching it to the spring arm component
     HandsMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
     HandsMeshComp->CastShadow = false;
+    HandsMeshComp->bOnlyOwnerSee = true;
     HandsMeshComp->AttachToComponent(SpringArmComponent, FAttachmentTransformRules::KeepRelativeTransform);
+
+    // Spawning the FPS third person mesh component and attaching it to the capsule component
+    ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ThirdPersonMesh"));
+    ThirdPersonMesh->CastShadow = true;
+    ThirdPersonMesh->bOwnerNoSee = true;
+    ThirdPersonMesh->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+
+    // Spawning the FPS shadow mesh component and attaching it to the capsule component
+    ShadowMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShadowMesh"));
+    ShadowMesh->CastShadow = true;
+    ShadowMesh->bOnlyOwnerSee = true;
+    ShadowMesh->bRenderInMainPass = false;
+    ShadowMesh->bRenderInDepthPass = true;
+    ShadowMesh->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 
     // Spawning the camera atop the FPS hands mesh
     CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
@@ -62,7 +77,7 @@ void AFPSCharacter::BeginPlay()
     }
     else
     {
-        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap! BeginPlay"))
+        UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap! BeginPlay"));
     }
 
     DefaultSpringArmOffset = SpringArmComponent->GetRelativeLocation().Z; // Setting the default location of the spring arm
@@ -796,7 +811,7 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCompon
 
 void AFPSCharacter::Fire()
 {
-    if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+    if (HasAuthority())
     {
         if (InventoryComponent->GetCurrentWeapon())
         {
@@ -805,10 +820,7 @@ void AFPSCharacter::Fire()
     }
     else
     {
-        if (InventoryComponent->GetCurrentWeapon())
-        {
-            Server_Fire();
-        }
+        Server_Fire();
     }
 }
 
@@ -819,7 +831,10 @@ bool AFPSCharacter::Server_Fire_Validate()
 
 void AFPSCharacter::Server_Fire_Implementation()
 {
-    InventoryComponent->GetCurrentWeapon()->StartFire();
+    if (InventoryComponent->GetCurrentWeapon())
+    {
+        InventoryComponent->GetCurrentWeapon()->StartFire();
+    }
 }
 
 void AFPSCharacter::Reload()
@@ -833,12 +848,7 @@ void AFPSCharacter::Reload()
     }
     else
     {
-        if (InventoryComponent->GetCurrentWeapon())
-        {
-            InventoryComponent->GetCurrentWeapon()->SetOwner(GetController());
-            InventoryComponent->GetCurrentWeapon()->SetRole(GetLocalRole());
-            Server_Reload();
-        }
+        Server_Reload();
     }
 }
 
@@ -849,5 +859,8 @@ bool AFPSCharacter::Server_Reload_Validate()
 
 void AFPSCharacter::Server_Reload_Implementation()
 {
-    InventoryComponent->GetCurrentWeapon()->Reload();
+    if (InventoryComponent->GetCurrentWeapon())
+    {
+        InventoryComponent->GetCurrentWeapon()->Reload();
+    }
 }

@@ -222,7 +222,7 @@ struct FAttachmentData : public FTableRowBase
 
 	/** The player's inspect animation */
 	UPROPERTY(EditDefaultsOnly, Category = "Grip", meta = (EditCondition = "AttachmentType == EAttachmentType::Grip"))
-	UAnimMontage *WeaponInspect;
+	UAnimSequence *WeaponInspect;
 
 	/** The ammunition type to be used (Spawned on the pickup) */
 	UPROPERTY(EditDefaultsOnly, Category = "Magazine", meta = (EditCondition = "AttachmentType == EAttachmentType::Magazine"))
@@ -440,7 +440,7 @@ struct FStaticWeaponData : public FTableRowBase
 
 	/** The player's inspect animation */
 	UPROPERTY(EditDefaultsOnly, Category = "Unique Weapon (No Attachments)")
-	UAnimMontage *WeaponInspect;
+	UAnimSequence *WeaponInspect;
 
 	/** The sprinting animation sequence */
 	UPROPERTY(EditDefaultsOnly, Category = "Unique Weapon (No Attachments)")
@@ -590,7 +590,7 @@ struct FStaticWeaponData : public FTableRowBase
 
 	/** particle effect to be spawned at the muzzle when a shot is fired */
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
-	UParticleSystem *MuzzleFlash;
+	UNiagaraSystem *MuzzleFlash;
 
 	/** particle effect to be spawned at the muzzle that shows the path of the bullet */
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
@@ -738,6 +738,18 @@ protected:
 	void Multi_Reload();
 	bool Multi_Reload_Validate();
 	void Multi_Reload_Implementation();
+
+	/** RPC of the StartRecoil function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_StartRecoil();
+	bool Server_StartRecoil_Validate();
+	void Server_StartRecoil_Implementation();
+
+	/** RPC of the Recoil function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_Recoil();
+	bool Server_Recoil_Validate();
+	void Server_Recoil_Implementation();
 
 	/** The main skeletal mesh - holds the weapon model */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")

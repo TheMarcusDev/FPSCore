@@ -15,39 +15,38 @@
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
-
-    bAlwaysRelevant = true;
     bReplicates = true;
+    bAlwaysRelevant = true;
     SetAutonomousProxy(true);
 
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
 
-    // Creating our weapon's skeletal mesh, telling it to not cast shadows and finally setting it as the root of the actor
+    // Creating our weapon's skeletal mesh, telling it to cast shadows and finally setting it as the root of the actor
     MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
-    MeshComp->CastShadow = false;
+    MeshComp->CastShadow = true;
     RootComponent = MeshComp;
 
-    // Creating the skeletal meshes for our attachments and making sure that they do not cast shadows
+    // Creating the skeletal meshes for our attachments and making sure that they cast shadows
 
     BarrelAttachment = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BarrelAttachment"));
-    BarrelAttachment->CastShadow = false;
+    BarrelAttachment->CastShadow = true;
     BarrelAttachment->SetupAttachment(RootComponent);
 
     MagazineAttachment = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MagazineAttachment"));
-    MagazineAttachment->CastShadow = false;
+    MagazineAttachment->CastShadow = true;
     MagazineAttachment->SetupAttachment(RootComponent);
 
     SightsAttachment = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SightsAttachment"));
-    SightsAttachment->CastShadow = false;
+    SightsAttachment->CastShadow = true;
     SightsAttachment->SetupAttachment(RootComponent);
 
     StockAttachment = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("StockAttachment"));
-    StockAttachment->CastShadow = false;
+    StockAttachment->CastShadow = true;
     StockAttachment->SetupAttachment(RootComponent);
 
     GripAttachment = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GripAttachment"));
-    GripAttachment->CastShadow = false;
+    GripAttachment->CastShadow = true;
     GripAttachment->SetupAttachment(RootComponent);
 }
 
@@ -55,7 +54,6 @@ AWeaponBase::AWeaponBase()
 void AWeaponBase::BeginPlay()
 {
     Super::BeginPlay();
-
     // Getting a reference to the relevant row in the WeaponData DataTable
     if (WeaponDataTable && (DataTableNameRef != ""))
     {
@@ -228,6 +226,9 @@ void AWeaponBase::SpawnAttachments()
 
 void AWeaponBase::StartFire()
 {
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+    UE_LOG(LogTemp, Warning, TEXT("STARTFIRE CALLED BY %s"), *CharacterController->GetName());
     if (bCanFire)
     {
         // sets a timer for firing the weapon - if bAutomaticFire is true then this timer will repeat until cleared by StopFire(), leading to fully automatic fire
@@ -239,7 +240,8 @@ void AWeaponBase::StartFire()
         }
 
         // Simultaneously begins to play the recoil timeline
-        StartRecoil();
+
+        Server_StartRecoil();
     }
 }
 
@@ -250,7 +252,7 @@ void AWeaponBase::StartRecoil()
     AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
     AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
-    if (bCanFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading && CharacterController)
+    if (bCanFire && !bIsReloading && CharacterController)
     {
         // Plays the recoil timelines and saves the current control rotation in order to recover to it
         VerticalRecoilTimeline.PlayFromStart();
@@ -258,6 +260,16 @@ void AWeaponBase::StartRecoil()
         ControlRotation = CharacterController->GetControlRotation();
         bShouldRecover = true;
     }
+}
+
+bool AWeaponBase::Server_StartRecoil_Validate()
+{
+    return true;
+}
+
+void AWeaponBase::Server_StartRecoil_Implementation()
+{
+    StartRecoil();
 }
 
 void AWeaponBase::EnableFire()
@@ -284,7 +296,6 @@ void AWeaponBase::StopFire()
         bHasFiredRecently = false;
         bIsWeaponReadyToFire = false;
         GetWorldTimerManager().ClearTimer(SpamFirePreventionDelay);
-        // GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::SanitizeFloat(GetWorldTimerManager().GetTimerRemaining(ShotDelay)));
         GetWorldTimerManager().SetTimer(SpamFirePreventionDelay, this, &AWeaponBase::ReadyToFire, GetWorldTimerManager().GetTimerRemaining(ShotDelay), false, GetWorldTimerManager().GetTimerRemaining(ShotDelay));
     }
     GetWorldTimerManager().ClearTimer(ShotDelay);
@@ -302,12 +313,14 @@ void AWeaponBase::Server_StopFire_Implementation()
 
 void AWeaponBase::Fire()
 {
-    GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Blue, FString::FromInt(GeneralWeaponData.ClipSize), true);
+    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
+    UE_LOG(LogTemp, Warning, TEXT("FIRE CALLED BY %s"), *CharacterController->GetName());
     // Allowing the gun to fire if it has ammunition, is not reloading and the bCanFire variable is true
     if (bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
     {
         // Casting to the player character
-        AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+        // AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
 
         // Printing debug strings
         if (bShowDebug)
@@ -340,8 +353,14 @@ void AWeaponBase::Fire()
             TraceEnd = TraceStart + (TraceDirection * (WeaponData.bIsShotgun ? WeaponData.ShotgunRange : WeaponData.LengthMultiplier));
 
             // Applying Recoil to the weapon
-            Recoil();
-
+            if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+            {
+                Recoil();
+            }
+            else
+            {
+                Server_Recoil();
+            }
             EndPoint = TraceEnd;
 
             // Sets the default values for our trace query
@@ -438,8 +457,6 @@ bool AWeaponBase::Multi_Fire_Validate()
 }
 void AWeaponBase::Multi_Fire_Implementation()
 {
-    // GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Black, FString::Printf(TEXT("bCanFire: %s"), bCanFire ? TEXT("true") : TEXT("false")));
-
     // Casting to the player character
     AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
 
@@ -498,9 +515,14 @@ void AWeaponBase::Multi_Fire_Implementation()
             UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.DefaultHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
         }
     }
-    // Spawning the muzzle flash particle
-
-    // UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, MeshComp, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
+    if (WeaponData.bHasAttachments)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, BarrelAttachment, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, BarrelAttachment->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
+    }
+    else
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, MeshComp, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, MeshComp->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
+    }
 
     // Spawning the firing sound
     if (WeaponData.bSilenced)
@@ -547,6 +569,16 @@ void AWeaponBase::Recoil()
 
     ShotsFired += 1;
     GetWorld()->GetFirstPlayerController()->ClientStartCameraShake(WeaponData.RecoilCameraShake);
+}
+
+bool AWeaponBase::Server_Recoil_Validate()
+{
+    return true;
+}
+
+void AWeaponBase::Server_Recoil_Implementation()
+{
+    Recoil();
 }
 
 void AWeaponBase::RecoilRecovery()
