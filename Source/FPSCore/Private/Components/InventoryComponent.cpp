@@ -11,6 +11,8 @@
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -61,7 +63,8 @@ void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Starter Weapon
+	// Spawning starter weapons
+
 	StarterWeapon();
 }
 
@@ -185,11 +188,14 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const int InventoryPosition, const bool bSpawnPickup,
 									  const bool bStatic, const FTransform PickupTransform, const FRuntimeWeaponData DataStruct)
 {
-	if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+	// Determining spawn parameters (forcing the weapon pickup to spawn at all times)
+	AFPSCharacter *CurrentPlayer = Cast<AFPSCharacter>(GetOwner());
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = CurrentPlayer;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	if (CurrentPlayer)
 	{
-		// Determining spawn parameters (forcing the weapon pickup to spawn at all times)
-		FActorSpawnParameters SpawnParameters;
-		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		if (InventoryPosition == CurrentWeaponSlot && EquippedWeapons.Contains(InventoryPosition))
 		{
 			if (bSpawnPickup)
@@ -198,11 +204,9 @@ void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const 
 				FVector TraceStart = FVector::ZeroVector;
 				FRotator TraceStartRotation = FRotator::ZeroRotator;
 
-				if (const AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
-				{
-					TraceStart = FPSCharacter->GetCameraComponent()->GetComponentLocation();
-					TraceStartRotation = FPSCharacter->GetCameraComponent()->GetComponentRotation();
-				}
+				TraceStart = CurrentPlayer->GetCameraComponent()->GetComponentLocation();
+				TraceStartRotation = CurrentPlayer->GetCameraComponent()->GetComponentRotation();
+
 				const FVector TraceDirection = TraceStartRotation.Vector();
 				const FVector TraceEnd = TraceStart + TraceDirection * WeaponSpawnDistance;
 
@@ -223,60 +227,27 @@ void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const 
 				EquippedWeapons[InventoryPosition]->Destroy();
 			}
 		}
-		// Spawns the new weapon
 
-		AWeaponBase *SpawnedWeapon = GetWorld()->SpawnActor<AWeaponBase>(NewWeapon, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParameters);
-
-		if (SpawnedWeapon)
+		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
 		{
-			// Placing the new weapon at the correct location and finishing up it's initialisation
-			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+			// Spawns the new weapon
+			AWeaponBase *SpawnedWeapon = GetWorld()->SpawnActorDeferred<AWeaponBase>(NewWeapon, FTransform::Identity, CurrentPlayer, CurrentPlayer, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+			if (SpawnedWeapon)
 			{
-				SpawnedWeapon->AttachToComponent(FPSCharacter->GetHandsMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SpawnedWeapon->GetStaticWeaponData()->WeaponAttachmentSocketName);
+				// Placing the new weapon at the correct location and finishing up it's initialization
+
+				SpawnedWeapon->SetOwner(CurrentPlayer);
 
 				SpawnedWeapon->SetRuntimeWeaponData(DataStruct);
+				SpawnedWeapon->MeshComp->CastShadow = true;
 				SpawnedWeapon->SpawnAttachments();
 
-				SpawnedWeapon->SetOwner(FPSCharacter);
+				SpawnedWeapon->SetOwner(CurrentPlayer);
+				SpawnedWeapon->FinishSpawning(FTransform::Identity);
 
 				// Calling update weapon
 				UpdateWeapon(SpawnedWeapon, InventoryPosition);
-			}
-		}
-	}
-}
-
-bool UInventoryComponent::Server_UpdateWeapon_Validate(AWeaponBase *SpawnedWeapon, const int InventoryPosition)
-{
-	return true;
-}
-
-void UInventoryComponent::Server_UpdateWeapon_Implementation(AWeaponBase *SpawnedWeapon, const int InventoryPosition)
-{
-	EquippedWeapons.Add(InventoryPosition, SpawnedWeapon);
-	// Disabling the currently equipped weapon, if it exists
-	if (CurrentWeapon)
-	{
-		CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
-		CurrentWeapon->SetActorHiddenInGame(true);
-		CurrentWeapon->StopFire();
-	}
-
-	// Swapping to the new weapon, enabling it and playing it's equip animation
-	CurrentWeapon = EquippedWeapons[InventoryPosition];
-	CurrentWeaponSlot = InventoryPosition;
-
-	if (CurrentWeapon)
-	{
-		CurrentWeapon->PrimaryActorTick.bCanEverTick = true;
-		CurrentWeapon->SetActorHiddenInGame(false);
-		if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
-		{
-			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
-			{
-				FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
-				FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
-				FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
 			}
 		}
 	}
@@ -289,6 +260,7 @@ void UInventoryComponent::UpdateWeapon(AWeaponBase *SpawnedWeapon, const int Inv
 	if (CurrentPlayer == this->GetOwner())
 	{
 		EquippedWeapons.Add(InventoryPosition, SpawnedWeapon);
+
 		// Disabling the currently equipped weapon, if it exists
 		if (CurrentWeapon)
 		{
@@ -305,13 +277,14 @@ void UInventoryComponent::UpdateWeapon(AWeaponBase *SpawnedWeapon, const int Inv
 		{
 			CurrentWeapon->PrimaryActorTick.bCanEverTick = true;
 			CurrentWeapon->SetActorHiddenInGame(false);
+
 			if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
 			{
-				if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+				if (CurrentPlayer)
 				{
-					FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
-					FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
-					FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
+					CurrentPlayer->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
+					CurrentPlayer->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
+					CurrentPlayer->UpdateMovementState(CurrentPlayer->GetMovementState());
 				}
 			}
 		}

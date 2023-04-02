@@ -710,6 +710,12 @@ public:
 		return MeshComp;
 	}
 
+	UFUNCTION(BlueprintPure, Category = "Weapon Base")
+	USkeletalMeshComponent *GetTPMeshComp() const
+	{
+		return TPMeshComp;
+	}
+
 	/** Returns the vertical camera offset for this weapon instance */
 	UFUNCTION(BlueprintCallable, Category = "Weapon Base")
 	float GetVerticalCameraOffset() const { return VerticalCameraOffset; }
@@ -719,6 +725,20 @@ public:
 	void Server_StopFire();
 	bool Server_StopFire_Validate();
 	void Server_StopFire_Implementation();
+
+	/** The main skeletal mesh - holds the weapon model */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	USkeletalMeshComponent *MeshComp;
+
+	/** The third person skeletal mesh - holds the third person weapon model */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"), Replicated)
+	USkeletalMeshComponent *TPMeshComp;
+
+	UPROPERTY(Replicated)
+	bool bOnlyOwnerSee;
+
+	UPROPERTY(Replicated)
+	bool bOwnerNoSee;
 
 protected:
 	/** Multicast of the firing function */
@@ -751,10 +771,6 @@ protected:
 	bool Server_Recoil_Validate();
 	void Server_Recoil_Implementation();
 
-	/** The main skeletal mesh - holds the weapon model */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
-	USkeletalMeshComponent *MeshComp;
-
 	/** The skeletal mesh used to hold the current barrel attachment */
 	UPROPERTY(BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent *BarrelAttachment;
@@ -774,6 +790,10 @@ protected:
 	/** The skeletal mesh used to hold the current grip attachment */
 	UPROPERTY(BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent *GripAttachment;
+
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const;
+
+	void PreInitializeComponents();
 
 private:
 #pragma region FUNCTIONS

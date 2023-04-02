@@ -14,7 +14,6 @@
 #include "FPSCharacter.generated.h"
 
 class UCameraComponent;
-class USpringArmComponent;
 class USkeletalMeshComponent;
 class AWeaponBase;
 class UAnimMontage;
@@ -168,9 +167,6 @@ public:
 	 */
 	void UpdateMovementState(EMovementState NewMovementState);
 
-	/** Updating weapon */
-	void UpdateWeapon(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
-
 protected:
 	/** Calling Fire Function */
 	void Fire();
@@ -205,10 +201,6 @@ protected:
 	/** The character's third person mesh component */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
 	USkeletalMeshComponent *ShadowMesh;
-
-	/** The spring arm component, which is required to enable 'use control rotation' */
-	UPROPERTY(EditDefaultsOnly, Category = "Components")
-	USpringArmComponent *SpringArmComponent;
 
 	/** Hand animation blend space for when the player has no weapon  */
 	UPROPERTY(EditDefaultsOnly, Category = "Animations | Blend Spaces")

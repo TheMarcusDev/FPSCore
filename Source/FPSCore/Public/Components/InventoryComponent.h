@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 #include "WeaponBase.h"
 #include "Components/ActorComponent.h"
+#include "Engine/EngineTypes.h"
 #include "InventoryComponent.generated.h"
 
 class UCameraComponent;
@@ -223,13 +224,6 @@ private:
 	FTimerHandle ReloadRetry;
 
 	FTimerHandle WeaponSwapDelegate;
-
-protected:
-
-UFUNCTION(Server, Reliable, WithValidation)
-	void Server_UpdateWeapon(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
-	bool Server_UpdateWeapon_Validate(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
-	void Server_UpdateWeapon_Implementation(AWeaponBase *SpawnedWeapon, const int InventoryPosition);
 
 public:
 	/** THe Number of slots for Weapons that this player has */

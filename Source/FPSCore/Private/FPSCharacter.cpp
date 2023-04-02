@@ -21,7 +21,6 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/InputSettings.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values
@@ -30,16 +29,16 @@ AFPSCharacter::AFPSCharacter()
     // Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
 
-    // Spawning the spring arm component
-    SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
-    SpringArmComponent->bUsePawnControlRotation = true;
-    SpringArmComponent->SetupAttachment(RootComponent);
+    // Spawning the camera atop the FPS hands mesh
+    CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
+    CameraComponent->SetupAttachment(RootComponent);
+    CameraComponent->bUsePawnControlRotation = true;
 
     // Spawning the FPS hands mesh component and attaching it to the spring arm component
     HandsMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
     HandsMeshComp->CastShadow = false;
     HandsMeshComp->bOnlyOwnerSee = true;
-    HandsMeshComp->AttachToComponent(SpringArmComponent, FAttachmentTransformRules::KeepRelativeTransform);
+    HandsMeshComp->AttachToComponent(CameraComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
     // Spawning the FPS third person mesh component and attaching it to the capsule component
     ThirdPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ThirdPersonMesh"));
@@ -54,13 +53,6 @@ AFPSCharacter::AFPSCharacter()
     ShadowMesh->bRenderInMainPass = false;
     ShadowMesh->bRenderInDepthPass = true;
     ShadowMesh->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-
-    // Spawning the camera atop the FPS hands mesh
-    CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
-    if (HandsMeshComp)
-    {
-        CameraComponent->AttachToComponent(HandsMeshComp, FAttachmentTransformRules::KeepRelativeTransform, "CameraSocket");
-    }
 
     DefaultCapsuleHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight(); // setting the default height of the capsule
 }
@@ -79,8 +71,6 @@ void AFPSCharacter::BeginPlay()
     {
         UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap! BeginPlay"));
     }
-
-    DefaultSpringArmOffset = SpringArmComponent->GetRelativeLocation().Z; // Setting the default location of the spring arm
 
     // Binding a timeline to our vaulting curve
     if (VaultTimelineCurve)
@@ -636,9 +626,6 @@ void AFPSCharacter::Tick(const float DeltaTime)
     CurrentSpringArmOffset = NewLocation;
     // Sets the half height of the capsule component to the new interpolated half height
     GetCapsuleComponent()->SetCapsuleHalfHeight(NewHalfHeight);
-    FVector NewSpringArmLocation = SpringArmComponent->GetRelativeLocation();
-    NewSpringArmLocation.Z = NewLocation;
-    SpringArmComponent->SetRelativeLocation(NewSpringArmLocation);
 
     if (bRestrictSprintAngle)
     {
