@@ -17,7 +17,6 @@
 AWeaponBase::AWeaponBase()
 {
     bReplicates = true;
-    SetReplicates(true);
     bAlwaysRelevant = true;
     SetAutonomousProxy(true);
     bNetUseOwnerRelevancy = true;
@@ -205,6 +204,7 @@ void AWeaponBase::SpawnAttachments()
                     WeaponData.EmptyPlayerReload = AttachmentData->EmptyPlayerReload;
                     WeaponData.PlayerReload = AttachmentData->PlayerReload;
                     WeaponData.Gun_Shot = AttachmentData->Gun_Shot;
+                    WeaponData.ShotGun_Shot2 = AttachmentData->ShotGun_Shot2;
                     WeaponData.Player_Shot = AttachmentData->Player_Shot;
                     WeaponData.AccuracyDebuff = AttachmentData->AccuracyDebuff;
                     WeaponData.bWaitForAnim = AttachmentData->bWaitForAnim;
@@ -499,16 +499,51 @@ void AWeaponBase::Multi_Fire_Implementation()
     for (int i = 0; i < NumberOfShots; i++)
     {
         // Playing an animation on the weapon mesh
-        if (WeaponData.Gun_Shot)
+        if (!WeaponData.bIsShotgun)
         {
-            MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
-            TPMeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
-            if (WeaponData.bWaitForAnim)
+            if (WeaponData.Gun_Shot)
             {
-                // Preventing the player from firing the weapon until the animation finishes playing
-                const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
-                bCanFire = false;
-                GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
+                MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+                TPMeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+                if (WeaponData.bWaitForAnim)
+                {
+                    // Preventing the player from firing the weapon until the animation finishes playing
+                    const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
+                    bCanFire = false;
+                    GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
+                }
+            }
+        }
+        else
+        {
+            if (WeaponData.Gun_Shot)
+            {
+                if (!ShotGunFiredFirstShot)
+                {
+                    MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+                    TPMeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+                    if (WeaponData.bWaitForAnim)
+                    {
+                        // Preventing the player from firing the weapon until the animation finishes playing
+                        const float AnimWaitTime = WeaponData.Gun_Shot->GetPlayLength();
+                        bCanFire = false;
+                        GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
+                    }
+                    ShotGunFiredFirstShot = true;
+                }
+                else
+                {
+                    MeshComp->PlayAnimation(WeaponData.ShotGun_Shot2, false);
+                    TPMeshComp->PlayAnimation(WeaponData.ShotGun_Shot2, false);
+                    if (WeaponData.bWaitForAnim)
+                    {
+                        // Preventing the player from firing the weapon until the animation finishes playing
+                        const float AnimWaitTime = WeaponData.ShotGun_Shot2->GetPlayLength();
+                        bCanFire = false;
+                        GetWorldTimerManager().SetTimer(AnimationWaitDelay, this, &AWeaponBase::EnableFire, AnimWaitTime, false, AnimWaitTime);
+                    }
+                    ShotGunFiredFirstShot = false;
+                }
             }
         }
 

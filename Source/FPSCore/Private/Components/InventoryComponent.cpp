@@ -154,15 +154,10 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
 		CurrentWeapon->SetActorHiddenInGame(true);
 		CurrentWeapon->SetCanFire(true);
-		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
-		{
-			CurrentWeapon->StopFire();
-		}
-		else
-		{
-			CurrentWeapon->SetRole(ROLE_SimulatedProxy);
-			CurrentWeapon->Server_StopFire();
-		}
+
+		CurrentWeapon->StopFire();
+		CurrentWeapon->SetRole(ROLE_SimulatedProxy);
+		CurrentWeapon->Server_StopFire();
 	}
 
 	// Swapping to the new weapon, enabling it and playing it's equip animation

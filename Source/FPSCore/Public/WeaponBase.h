@@ -208,6 +208,10 @@ struct FAttachmentData : public FTableRowBase
 	UPROPERTY(EditDefaultsOnly, Category = "Grip", meta = (EditCondition = "AttachmentType == EAttachmentType::Grip"))
 	UAnimSequence *Gun_Shot;
 
+	/** The second shooting animation for the weapon itself when shotgun (bolt shooting back/forward) */
+	UPROPERTY(EditDefaultsOnly, Category = "Grip", meta = (EditCondition = "AttachmentType == EAttachmentType::Grip"))
+	UAnimSequence *ShotGun_Shot2;
+
 	/** The shooting animation for the Player */
 	UPROPERTY(EditDefaultsOnly, Category = "Grip", meta = (EditCondition = "AttachmentType == EAttachmentType::Grip"))
 	UAnimMontage *Player_Shot;
@@ -449,6 +453,10 @@ struct FStaticWeaponData : public FTableRowBase
 	/** The shooting animation for the weapon itself (bolt shooting back/forward) */
 	UPROPERTY(EditDefaultsOnly, Category = "Unique Weapon (No Attachments)")
 	UAnimSequence *Gun_Shot;
+
+	/** The shooting animation for the weapon itself (bolt shooting back/forward) */
+	UPROPERTY(EditDefaultsOnly, Category = "Unique Weapon (No Attachments)")
+	UAnimSequence *ShotGun_Shot2;
 
 	/** The shooting animation for the Player */
 	UPROPERTY(EditDefaultsOnly, Category = "Unique Weapon (No Attachments)")
@@ -831,6 +839,8 @@ private:
 
 	/** Called every frame */
 	virtual void Tick(float DeltaTime) override;
+
+	bool ShotGunFiredFirstShot = false;
 
 #pragma endregion
 
