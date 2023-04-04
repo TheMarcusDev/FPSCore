@@ -20,7 +20,7 @@ UInventoryComponent::UInventoryComponent()
 }
 
 // Swapping weapons with the scroll wheel
-void UInventoryComponent::ScrollWeapon(const FInputActionValue &Value)
+void UInventoryComponent::ScrollWeapon_Implementation(const FInputActionValue &Value)
 {
 	int NewID;
 
@@ -55,7 +55,14 @@ void UInventoryComponent::ScrollWeapon(const FInputActionValue &Value)
 	}
 	else if (!bPerformingWeaponSwap)
 	{
-		SwapWeapon(NewID);
+		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+		{
+			SwapWeapon(NewID);
+		}
+		else
+		{
+			Server_SwapWeapon(NewID);
+		}
 	}
 }
 
@@ -123,7 +130,7 @@ void UInventoryComponent::StarterWeapon()
 	}
 }
 
-void UInventoryComponent::SwapWeapon(const int SlotId)
+void UInventoryComponent::Server_SwapWeapon_Implementation(const int SlotId)
 {
 	// Returning if the target weapon is already equipped or it does not exist
 	if (CurrentWeaponSlot == SlotId)
@@ -139,6 +146,7 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
 		{
 			CurrentWeapon->StopFire();
+			CurrentWeapon->Server_StopFire();
 			CurrentWeapon->SetCanFire(false);
 			bPerformingWeaponSwap = true;
 			TargetWeaponSlot = SlotId;
@@ -156,7 +164,6 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		CurrentWeapon->SetCanFire(true);
 
 		CurrentWeapon->StopFire();
-		CurrentWeapon->SetRole(ROLE_SimulatedProxy);
 		CurrentWeapon->Server_StopFire();
 	}
 
@@ -171,13 +178,77 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
 			{
 				FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
-				FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
 				FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
+				FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
 			}
 		}
 	}
 
 	bPerformingWeaponSwap = false;
+}
+
+void UInventoryComponent::SwapWeapon(const int SlotId)
+{
+	if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+	{
+		// Returning if the target weapon is already equipped or it does not exist
+		if (CurrentWeaponSlot == SlotId)
+		{
+			return;
+		}
+		if (!EquippedWeapons.Contains(SlotId))
+		{
+			return;
+		}
+		// if (!bPerformingWeaponSwap)
+		// {
+		// 	if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
+		// 	{
+		// 		CurrentWeapon->StopFire();
+		// 		CurrentWeapon->Server_StopFire();
+		// 		CurrentWeapon->SetCanFire(false);
+		// 		bPerformingWeaponSwap = true;
+		// 		TargetWeaponSlot = SlotId;
+		// 		HandleUnequip();
+		// 		return;
+		// 	}
+		// }
+		CurrentWeaponSlot = SlotId;
+
+		// Disabling the currently equipped weapon, if it exists
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
+			CurrentWeapon->SetActorHiddenInGame(true);
+			CurrentWeapon->SetCanFire(true);
+
+			CurrentWeapon->StopFire();
+			CurrentWeapon->Server_StopFire();
+		}
+
+		// Swapping to the new weapon, enabling it and playing it's equip animation
+		CurrentWeapon = EquippedWeapons[SlotId];
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->PrimaryActorTick.bCanEverTick = true;
+			CurrentWeapon->SetActorHiddenInGame(false);
+			// if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
+			// {
+			// 	if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+			// 	{
+			// 		FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
+			// 		FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
+			// 		FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
+			// 	}
+			// }
+		}
+
+		bPerformingWeaponSwap = false;
+	}
+	// else
+	// {
+	// 	Server_SwapWeapon(SlotId);
+	// }
 }
 
 void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const int InventoryPosition, const bool bSpawnPickup,
@@ -242,6 +313,7 @@ void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const 
 				SpawnedWeapon->FinishSpawning(FTransform::Identity);
 
 				// Calling update weapon
+				EquippedWeapons.Add(InventoryPosition, SpawnedWeapon);
 				UpdateWeapon(SpawnedWeapon, InventoryPosition);
 			}
 		}
@@ -254,8 +326,6 @@ void UInventoryComponent::UpdateWeapon(AWeaponBase *SpawnedWeapon, const int Inv
 	AFPSCharacter *CurrentPlayer = Cast<AFPSCharacter>(GetOwner());
 	if (CurrentPlayer == this->GetOwner())
 	{
-		EquippedWeapons.Add(InventoryPosition, SpawnedWeapon);
-
 		// Disabling the currently equipped weapon, if it exists
 		if (CurrentWeapon)
 		{
@@ -318,7 +388,6 @@ void UInventoryComponent::StopFire()
 		}
 		else
 		{
-			CurrentWeapon->SetRole(ROLE_SimulatedProxy);
 			CurrentWeapon->Server_StopFire();
 		}
 	}
@@ -342,8 +411,9 @@ void UInventoryComponent::Inspect()
 	}
 }
 
-void UInventoryComponent::HandleUnequip()
+void UInventoryComponent::HandleUnequip_Implementation()
 {
+	UE_LOG(LogTemp, Warning, TEXT("HandleUnequip"));
 	if (CurrentWeapon)
 	{
 		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
@@ -359,7 +429,14 @@ void UInventoryComponent::HandleUnequip()
 
 void UInventoryComponent::UnequipReturn()
 {
-	SwapWeapon(TargetWeaponSlot);
+	if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+	{
+		SwapWeapon(TargetWeaponSlot);
+	}
+	else
+	{
+		Server_SwapWeapon(TargetWeaponSlot);
+	}
 }
 
 void UInventoryComponent::SetupInputComponent(UEnhancedInputComponent *PlayerInputComponent)

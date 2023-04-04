@@ -187,7 +187,9 @@ private:
 	void SwapWeapon() { SwapWeapon(SlotID); }
 
 	/** Swaps between weapons using the scroll wheel */
+	UFUNCTION(Server, Reliable)
 	void ScrollWeapon(const FInputActionValue &Value);
+	void ScrollWeapon_Implementation(const FInputActionValue &Value);
 
 	/** Stops firing the weapon */
 	void StopFire();
@@ -195,7 +197,9 @@ private:
 	/** Plays an inspect animation on the weapon */
 	void Inspect();
 
+	UFUNCTION(NetMulticast, Reliable)
 	void HandleUnequip();
+	void HandleUnequip_Implementation();
 
 	void UnequipReturn();
 
@@ -224,6 +228,11 @@ private:
 	FTimerHandle ReloadRetry;
 
 	FTimerHandle WeaponSwapDelegate;
+
+	/** RPC of the stop fire function */
+	UFUNCTION(Server, Reliable)
+	void Server_SwapWeapon(const int SlotId);
+	void Server_SwapWeapon_Implementation(const int SlotId);
 
 public:
 	/** THe Number of slots for Weapons that this player has */

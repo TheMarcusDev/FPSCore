@@ -147,7 +147,6 @@ void AWeaponBase::BeginPlay()
     {
         MeshComp->AttachToComponent(CurrentPlayer->GetHandsMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, GetStaticWeaponData()->WeaponAttachmentSocketName);
         TPMeshComp->AttachToComponent(CurrentPlayer->GetThirdPersonMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, GetStaticWeaponData()->WeaponAttachmentSocketName);
-        UE_LOG(LogTemp, Warning, TEXT("Attached weapons init"));
     }
 }
 
