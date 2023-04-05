@@ -146,7 +146,7 @@ void AWeaponBase::BeginPlay()
     if (AFPSCharacter *CurrentPlayer = Cast<AFPSCharacter>(GetOwner()))
     {
         MeshComp->AttachToComponent(CurrentPlayer->GetHandsMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, GetStaticWeaponData()->WeaponAttachmentSocketName);
-        TPMeshComp->AttachToComponent(CurrentPlayer->GetThirdPersonMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, GetStaticWeaponData()->WeaponAttachmentSocketName);
+        SetTPAttachment();
     }
 }
 
@@ -157,6 +157,14 @@ void AWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifet
     DOREPLIFETIME_CONDITION(AWeaponBase, bOnlyOwnerSee, COND_OwnerOnly);
     DOREPLIFETIME_CONDITION(AWeaponBase, bOwnerNoSee, COND_SkipOwner);
     DOREPLIFETIME_CONDITION(AWeaponBase, TPMeshComp, COND_SkipOwner);
+}
+
+void AWeaponBase::SetTPAttachment()
+{
+    if (AFPSCharacter *CurrentPlayer = Cast<AFPSCharacter>(GetOwner()))
+    {
+        TPMeshComp->AttachToComponent(CurrentPlayer->GetThirdPersonMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, GetStaticWeaponData()->WeaponAttachmentSocketName);
+    }
 }
 
 void AWeaponBase::SpawnAttachments()
@@ -475,7 +483,7 @@ void AWeaponBase::Fire()
             HorizontalRecoilTimeline.Stop();
             RecoilRecovery();
         }
-        Multi_Fire();
+        Multi_Fire(Hit);
         bHasFiredRecently = true;
     }
     else if (bCanFire && !bIsReloading)
@@ -484,11 +492,11 @@ void AWeaponBase::Fire()
     }
 }
 
-bool AWeaponBase::Multi_Fire_Validate()
+bool AWeaponBase::Multi_Fire_Validate(FHitResult HitResult)
 {
     return true;
 }
-void AWeaponBase::Multi_Fire_Implementation()
+void AWeaponBase::Multi_Fire_Implementation(FHitResult HitResult)
 {
     // Casting to the player character
     AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
@@ -552,7 +560,7 @@ void AWeaponBase::Multi_Fire_Implementation()
             AnimTime = PlayerCharacter->GetThirdPersonMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
         }
 
-        EndPoint = Hit.Location;
+        EndPoint = HitResult.Location;
 
         const FRotator ParticleRotation = (EndPoint - (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation))).Rotation();
 
@@ -568,21 +576,21 @@ void AWeaponBase::Multi_Fire_Implementation()
 
         // Selecting the hit effect based on the hit physical surface material (hit.PhysMaterial.Get()) and spawning it (Niagara)
 
-        if (Hit.PhysMaterial.Get() == WeaponData.NormalDamageSurface || Hit.PhysMaterial.Get() == WeaponData.HeadshotDamageSurface)
+        if (HitResult.PhysMaterial.Get() == WeaponData.NormalDamageSurface || HitResult.PhysMaterial.Get() == WeaponData.HeadshotDamageSurface)
         {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.EnemyHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.EnemyHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
         }
-        else if (Hit.PhysMaterial.Get() == WeaponData.GroundSurface)
+        else if (HitResult.PhysMaterial.Get() == WeaponData.GroundSurface)
         {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.GroundHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.GroundHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
         }
-        else if (Hit.PhysMaterial.Get() == WeaponData.RockSurface)
+        else if (HitResult.PhysMaterial.Get() == WeaponData.RockSurface)
         {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.RockHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.RockHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
         }
         else
         {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.DefaultHitEffect, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.DefaultHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
         }
     }
     if (WeaponData.bHasAttachments)
@@ -850,6 +858,8 @@ void AWeaponBase::Tick(float DeltaTime)
     VerticalRecoilTimeline.TickTimeline(DeltaTime);
     HorizontalRecoilTimeline.TickTimeline(DeltaTime);
     RecoilRecoveryTimeline.TickTimeline(DeltaTime);
+
+    SetTPAttachment();
 
     if (bShowDebug)
     {

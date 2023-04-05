@@ -748,12 +748,15 @@ public:
 	UPROPERTY(Replicated)
 	bool bOwnerNoSee;
 
+	UFUNCTION()
+	void SetTPAttachment();
+
 protected:
 	/** Multicast of the firing function */
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
-	void Multi_Fire();
-	bool Multi_Fire_Validate();
-	void Multi_Fire_Implementation();
+	void Multi_Fire(FHitResult HitResult);
+	bool Multi_Fire_Validate(FHitResult HitResult);
+	void Multi_Fire_Implementation(FHitResult HitResult);
 
 	/** Multicast of the firing function with no bullets */
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
@@ -936,7 +939,7 @@ private:
 	FRotator TraceStartRotation;
 
 	/** hit result variable set when a line trace is spawned */
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	FHitResult Hit;
 
 	/** internal variable used to keep track of the final damage value after modifications */

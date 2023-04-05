@@ -89,6 +89,14 @@ void AFPSCharacter::BeginPlay()
 
     // Updating the crouched spring arm height based on the crouched capsule half height
     CrouchedSpringArmHeightDelta = CrouchedCapsuleHalfHeight - DefaultCapsuleHalfHeight;
+
+    if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
+    {
+        if (AWeaponBase *CurrentWeapon = InventoryComponent->GetCurrentWeapon())
+        {
+            CurrentWeapon->SetTPAttachment();
+        }
+    }
 }
 
 void AFPSCharacter::PawnClientRestart()
@@ -252,6 +260,7 @@ void AFPSCharacter::StartSlide()
     bPerformedSlide = true;
     UpdateMovementState(EMovementState::State_Slide);
     HandsMeshComp->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
+    ThirdPersonMesh->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
     GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::StopSlide, SlideTime, false, SlideTime);
     GetWorldTimerManager().SetTimer(SlideTimeOutHandler, this, &AFPSCharacter::TimeOutSlide, SlideTimeOut, false, SlideTimeOut);
     bCanSlide = false;
@@ -561,6 +570,7 @@ void AFPSCharacter::Vault(const FTransform TargetTransform)
     if (VaultMontage)
     {
         HandsMeshComp->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
+        ThirdPersonMesh->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
     }
     VaultTimeline.PlayFromStart();
 }

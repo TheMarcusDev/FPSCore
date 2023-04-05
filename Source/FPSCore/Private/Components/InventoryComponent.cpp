@@ -200,19 +200,19 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		{
 			return;
 		}
-		// if (!bPerformingWeaponSwap)
-		// {
-		// 	if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
-		// 	{
-		// 		CurrentWeapon->StopFire();
-		// 		CurrentWeapon->Server_StopFire();
-		// 		CurrentWeapon->SetCanFire(false);
-		// 		bPerformingWeaponSwap = true;
-		// 		TargetWeaponSlot = SlotId;
-		// 		HandleUnequip();
-		// 		return;
-		// 	}
-		// }
+		if (!bPerformingWeaponSwap)
+		{
+			if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
+			{
+				CurrentWeapon->StopFire();
+				CurrentWeapon->Server_StopFire();
+				CurrentWeapon->SetCanFire(false);
+				bPerformingWeaponSwap = true;
+				TargetWeaponSlot = SlotId;
+				HandleUnequip();
+				return;
+			}
+		}
 		CurrentWeaponSlot = SlotId;
 
 		// Disabling the currently equipped weapon, if it exists
@@ -232,23 +232,23 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		{
 			CurrentWeapon->PrimaryActorTick.bCanEverTick = true;
 			CurrentWeapon->SetActorHiddenInGame(false);
-			// if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
-			// {
-			// 	if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
-			// 	{
-			// 		FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
-			// 		FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
-			// 		FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
-			// 	}
-			// }
+			if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
+			{
+				if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+				{
+					FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
+					FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
+					FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
+				}
+			}
 		}
 
 		bPerformingWeaponSwap = false;
 	}
-	// else
-	// {
-	// 	Server_SwapWeapon(SlotId);
-	// }
+	else
+	{
+		Server_SwapWeapon(SlotId);
+	}
 }
 
 void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const int InventoryPosition, const bool bSpawnPickup,
