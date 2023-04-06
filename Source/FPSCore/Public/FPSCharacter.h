@@ -176,9 +176,9 @@ protected:
 
 	/** Calling RPC of firing function */
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_Fire();
-	bool Server_Fire_Validate();
-	void Server_Fire_Implementation();
+	void Server_Fire(FVector CameraLocation, FRotator CameraRotation);
+	bool Server_Fire_Validate(FVector CameraLocation, FRotator CameraRotation);
+	void Server_Fire_Implementation(FVector CameraLocation, FRotator CameraRotation);
 
 	/** Calling RPC of reloading function */
 	UFUNCTION(Server, Reliable, WithValidation)

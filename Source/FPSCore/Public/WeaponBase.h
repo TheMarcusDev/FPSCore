@@ -652,7 +652,7 @@ public:
 	void SetStaticWeaponData(const FStaticWeaponData NewWeaponData) { WeaponData = NewWeaponData; }
 
 	/** Starts firing the gun (sets the timer for automatic fire) */
-	void StartFire();
+	void StartFire(FVector CameraLocation, FRotator CameraRotation);
 
 	/** Stops the timer that allows for automatic fire */
 	void StopFire();
@@ -813,7 +813,7 @@ private:
 	AWeaponBase();
 
 	/** Spawns the line trace that deals damage and applies sound/visual effects */
-	void Fire();
+	void Fire(FVector CameraLocation, FRotator CameraRotation);
 
 	/** Applies recoil to the player controller */
 	void Recoil();

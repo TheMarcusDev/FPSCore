@@ -812,25 +812,29 @@ void AFPSCharacter::Fire()
     {
         if (InventoryComponent->GetCurrentWeapon())
         {
-            InventoryComponent->GetCurrentWeapon()->StartFire();
+            FVector CameraLocation = GetCameraComponent()->GetComponentLocation();
+            FRotator CameraRotation = GetCameraComponent()->GetComponentRotation();
+            InventoryComponent->GetCurrentWeapon()->StartFire(CameraLocation, CameraRotation);
         }
     }
     else
     {
-        Server_Fire();
+        FVector CameraLocation = GetCameraComponent()->GetComponentLocation();
+        FRotator CameraRotation = GetCameraComponent()->GetComponentRotation();
+        Server_Fire(CameraLocation, CameraRotation);
     }
 }
 
-bool AFPSCharacter::Server_Fire_Validate()
+bool AFPSCharacter::Server_Fire_Validate(FVector CameraLocation, FRotator CameraRotation)
 {
     return true;
 }
 
-void AFPSCharacter::Server_Fire_Implementation()
+void AFPSCharacter::Server_Fire_Implementation(FVector CameraLocation, FRotator CameraRotation)
 {
     if (InventoryComponent->GetCurrentWeapon())
     {
-        InventoryComponent->GetCurrentWeapon()->StartFire();
+        InventoryComponent->GetCurrentWeapon()->StartFire(CameraLocation, CameraRotation);
     }
 }
 

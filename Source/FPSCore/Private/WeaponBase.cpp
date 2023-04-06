@@ -277,12 +277,15 @@ void AWeaponBase::SpawnAttachments()
 
 // Start Fire
 
-void AWeaponBase::StartFire()
+void AWeaponBase::StartFire(FVector CameraLocation, FRotator CameraRotation)
 {
     if (bCanFire)
     {
         // sets a timer for firing the weapon - if bAutomaticFire is true then this timer will repeat until cleared by StopFire(), leading to fully automatic fire
-        GetWorldTimerManager().SetTimer(ShotDelay, this, &AWeaponBase::Fire, (60 / WeaponData.RateOfFire), WeaponData.bAutomaticFire, 0.0f);
+        GetWorldTimerManager().SetTimer(
+            ShotDelay, [this, CameraLocation, CameraRotation]()
+            { Fire(CameraLocation, CameraRotation); },
+            (60 / WeaponData.RateOfFire), WeaponData.bAutomaticFire, 0.0f);
 
         if (bShowDebug)
         {
@@ -361,7 +364,7 @@ void AWeaponBase::Server_StopFire_Implementation()
     StopFire();
 }
 
-void AWeaponBase::Fire()
+void AWeaponBase::Fire(FVector CameraLocation, FRotator CameraRotation)
 {
     // Allowing the gun to fire if it has ammunition, is not reloading and the bCanFire variable is true
     if (bCanFire && bIsWeaponReadyToFire && GeneralWeaponData.ClipSize > 0 && !bIsReloading)
@@ -385,8 +388,8 @@ void AWeaponBase::Fire()
         {
 
             // Calculating the start and end points of our line trace, and applying randomised variation
-            TraceStart = PlayerCharacter->GetCameraComponent()->GetComponentLocation();
-            TraceStartRotation = PlayerCharacter->GetCameraComponent()->GetComponentRotation();
+            TraceStart = CameraLocation;
+            TraceStartRotation = CameraRotation;
 
             float AccuracyMultiplier = 1.0f;
             if (PlayerCharacter->GetMovementState() == EMovementState::State_Sprint)

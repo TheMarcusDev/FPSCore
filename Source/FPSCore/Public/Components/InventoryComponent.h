@@ -90,6 +90,7 @@ public:
 	int GetCurrentWeaponSlot() const { return CurrentWeaponSlot; }
 
 	/** Returns the map of currently equipped weapons */
+	UFUNCTION(BlueprintCallable, Category = "Inventory Component")
 	TMap<int, AWeaponBase *> GetEquippedWeapons() const { return EquippedWeapons; }
 
 	/** Returns an equipped weapon
