@@ -167,6 +167,10 @@ public:
 	 */
 	void UpdateMovementState(EMovementState NewMovementState);
 
+	UFUNCTION(Server, Reliable)
+	void Server_UpdateMovementState(EMovementState NewMovementState);
+	void Server_UpdateMovementState_Implementation(EMovementState NewMovementState);
+
 protected:
 	/** Calling Fire Function */
 	void Fire();
@@ -265,7 +269,7 @@ private:
 	/** Stopping to walk */
 	void StopWalk();
 
-	/** Starting to Sprint */
+	/** Checking if it's sprinting, walking or idle */
 	void SprintCheck();
 
 	/** Starting to slide */
@@ -426,7 +430,9 @@ private:
 	bool bWantsToAim;
 
 	/** Whether the player is holding down the walk key */
-	bool bWantsToWalk = false;
+	bool bWantsToWalk;
+
+	bool bHoldingWalk;
 
 	bool bRestrictingSprint = false;
 
@@ -449,10 +455,13 @@ private:
 	bool bWantsToSlide = false;
 
 	/** Whether the character is walking */
-	bool bIsWalking = false;
+	bool bIsWalking;
 
 	/** Whether the character is sprinting */
 	bool bIsSprinting;
+
+	/** Whether the character is sprinting */
+	bool bIsSliding;
 
 	/** Whether the character is crouching */
 	bool bIsCrouching = false;
