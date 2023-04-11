@@ -167,10 +167,6 @@ public:
 	 */
 	void UpdateMovementState(EMovementState NewMovementState);
 
-	UFUNCTION(Server, Reliable)
-	void Server_UpdateMovementState(EMovementState NewMovementState);
-	void Server_UpdateMovementState_Implementation(EMovementState NewMovementState);
-
 protected:
 	/** Calling Fire Function */
 	void Fire();
