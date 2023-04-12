@@ -146,6 +146,10 @@ void AFPSCharacter::Move(const FInputActionValue &Value)
             }
         }
     }
+    else
+    {
+        UpdateMovementState(EMovementState::State_Idle);
+    }
 }
 
 void AFPSCharacter::Look(const FInputActionValue &Value)
@@ -591,6 +595,58 @@ void AFPSCharacter::Vault(const FTransform TargetTransform)
     VaultTimeline.PlayFromStart();
 }
 
+void AFPSCharacter::Multi_UpdateMovementState_Implementation(const EMovementState NewMovementState)
+{
+    // Clearing sprinting and crouching flags
+    bIsSprinting = false;
+    bIsCrouching = false;
+    bIsWalking = false;
+    bIsVaulting = false;
+    bIsSliding = false;
+
+    // Updating the movement state
+    MovementState = NewMovementState;
+
+    if (MovementDataMap.Contains(MovementState))
+    {
+        // Updating CharacterMovementComponent variables based on movement state
+        if (InventoryComponent)
+        {
+            if (InventoryComponent->GetCurrentWeapon())
+            {
+                InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                InventoryComponent->GetCurrentWeapon()->SetCanReload(MovementDataMap[MovementState].bCanReload);
+            }
+        }
+        GetCharacterMovement()->MaxAcceleration = MovementDataMap[MovementState].MaxAcceleration;
+        GetCharacterMovement()->BrakingDecelerationWalking = MovementDataMap[MovementState].BreakingDecelerationWalking;
+        GetCharacterMovement()->GroundFriction = MovementDataMap[MovementState].GroundFriction;
+        GetCharacterMovement()->MaxWalkSpeed = MovementDataMap[MovementState].MaxWalkSpeed;
+    }
+
+    // Updating sprinting and crouching flags
+    if (MovementState == EMovementState::State_Crouch)
+    {
+        bIsCrouching = true;
+    }
+    if (MovementState == EMovementState::State_Sprint)
+    {
+        bIsSprinting = true;
+    }
+    if (MovementState == EMovementState::State_Walk)
+    {
+        bIsWalking = true;
+    }
+    if (MovementState == EMovementState::State_Vault)
+    {
+        bIsVaulting = true;
+    }
+    if (MovementState == EMovementState::State_Slide)
+    {
+        bIsSliding = true;
+    }
+}
+
 void AFPSCharacter::Server_UpdateMovementState_Implementation(const EMovementState NewMovementState)
 {
     // Clearing sprinting and crouching flags
@@ -641,6 +697,7 @@ void AFPSCharacter::Server_UpdateMovementState_Implementation(const EMovementSta
     {
         bIsSliding = true;
     }
+    Multi_UpdateMovementState(NewMovementState);
 }
 
 // Function that determines the player's maximum speed and other related variables based on movement state
@@ -697,6 +754,10 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
     if (!HasAuthority())
     {
         Server_UpdateMovementState(NewMovementState);
+    }
+    else
+    {
+        Multi_UpdateMovementState(NewMovementState);
     }
 }
 

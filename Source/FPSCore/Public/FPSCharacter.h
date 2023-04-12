@@ -186,6 +186,10 @@ protected:
 	bool Server_Reload_Validate();
 	void Server_Reload_Implementation();
 
+	UFUNCTION(NetMultiCast, Reliable)
+	void Multi_UpdateMovementState(EMovementState NewMovementState);
+	void Multi_UpdateMovementState_Implementation(EMovementState NewMovementState);
+
 	UFUNCTION(Server, Reliable)
 	void Server_UpdateMovementState(EMovementState NewMovementState);
 	void Server_UpdateMovementState_Implementation(EMovementState NewMovementState);
