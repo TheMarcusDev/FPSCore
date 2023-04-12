@@ -939,7 +939,6 @@ private:
 	FRotator TraceStartRotation;
 
 	/** hit result variable set when a line trace is spawned */
-	UPROPERTY(Replicated)
 	FHitResult Hit;
 
 	/** internal variable used to keep track of the final damage value after modifications */

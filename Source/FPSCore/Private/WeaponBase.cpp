@@ -30,7 +30,7 @@ AWeaponBase::AWeaponBase()
     MeshComp->SetOwnerNoSee(false);
     MeshComp->bCastDynamicShadow = false;
     MeshComp->CastShadow = false;
-    MeshComp->SetupAttachment(RootComponent);
+    RootComponent = MeshComp;
 
     // Create third person mesh component
     TPMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TPMeshComp"));

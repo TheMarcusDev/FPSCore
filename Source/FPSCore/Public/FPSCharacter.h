@@ -186,6 +186,10 @@ protected:
 	bool Server_Reload_Validate();
 	void Server_Reload_Implementation();
 
+	UFUNCTION(Server, Reliable)
+	void Server_UpdateMovementState(EMovementState NewMovementState);
+	void Server_UpdateMovementState_Implementation(EMovementState NewMovementState);
+
 	/** The character's FPS camera component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Components")
 	UCameraComponent *CameraComponent;
@@ -264,9 +268,6 @@ private:
 
 	/** Stopping to walk */
 	void StopWalk();
-
-	/** Checking if it's sprinting, walking or idle */
-	void SprintCheck();
 
 	/** Starting to slide */
 	void StartSlide();
