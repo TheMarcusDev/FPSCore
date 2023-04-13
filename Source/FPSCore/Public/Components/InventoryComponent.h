@@ -172,6 +172,8 @@ public:
 	/** Starter Weapon Function */
 	void StarterWeapon();
 
+	void UnequipReturn();
+
 private:
 	/** Spawns starter weapons */
 	virtual void BeginPlay() override;
@@ -187,6 +189,10 @@ private:
 	template <int SlotID>
 	void SwapWeapon() { SwapWeapon(SlotID); }
 
+	/**	Template function for Server_SwapWeapon (used with the enhanced input component) */
+	template <int SlotID>
+	void Server_SwapWeapon() { Server_SwapWeapon(SlotID); }
+
 	/** Swaps between weapons using the scroll wheel */
 	UFUNCTION(Server, Reliable)
 	void ScrollWeapon(const FInputActionValue &Value);
@@ -198,11 +204,10 @@ private:
 	/** Plays an inspect animation on the weapon */
 	void Inspect();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void HandleUnequip();
-	void HandleUnequip_Implementation();
-
-	void UnequipReturn();
+	/** RPC of the stop fire function */
+	UFUNCTION(Server, Reliable)
+	void Server_SwapWeapon(const int SlotId);
+	void Server_SwapWeapon_Implementation(const int SlotId);
 
 	/** The distance at which pickups for old weapons spawn during a weapon swap */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera | Interaction")
@@ -227,13 +232,6 @@ private:
 	AWeaponBase *CurrentWeapon;
 
 	FTimerHandle ReloadRetry;
-
-	FTimerHandle WeaponSwapDelegate;
-
-	/** RPC of the stop fire function */
-	UFUNCTION(Server, Reliable)
-	void Server_SwapWeapon(const int SlotId);
-	void Server_SwapWeapon_Implementation(const int SlotId);
 
 public:
 	/** THe Number of slots for Weapons that this player has */

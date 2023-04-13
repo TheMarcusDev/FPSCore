@@ -751,6 +751,14 @@ public:
 	UFUNCTION()
 	void SetTPAttachment();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multi_SwapWeaponAnim();
+	void Multi_SwapWeaponAnim_Implementation();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void HandleUnequip(UInventoryComponent * InventoryComponent);
+	void HandleUnequip_Implementation(UInventoryComponent * InventoryComponent);
+
 protected:
 	/** Multicast of the firing function */
 	UFUNCTION(NetMulticast, Reliable, WithValidation)

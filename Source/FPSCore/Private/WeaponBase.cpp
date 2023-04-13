@@ -752,7 +752,6 @@ bool AWeaponBase::Multi_Reload_Validate()
 void AWeaponBase::Multi_Reload_Implementation()
 {
     AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
-    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
 
     // Differentiating between having no ammunition in the magazine (having to chamber a round after reloading)
     // or not, and playing an animation relevant to that
@@ -783,6 +782,35 @@ void AWeaponBase::Multi_Reload_Implementation()
         }
         PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.PlayerReload, 1.0f);
         PlayerCharacter->GetThirdPersonMesh()->GetAnimInstance()->Montage_Play(WeaponData.PlayerReload, 1.0f);
+    }
+}
+
+void AWeaponBase::Multi_SwapWeaponAnim_Implementation()
+{
+    if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+    {
+        // Set a timer to play the second animation
+        if (GetStaticWeaponData()->WeaponEquip)
+        {
+            UAnimMontage *EquipMontage = GetStaticWeaponData()->WeaponEquip;
+            // Play the second animation
+            FPSCharacter->GetThirdPersonMesh()->GetAnimInstance()->Montage_Play(EquipMontage, 1.0f);
+            FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(EquipMontage, 1.0f);
+        }
+    }
+}
+
+void AWeaponBase::HandleUnequip_Implementation(UInventoryComponent *InventoryComponent)
+{
+    if (GetStaticWeaponData()->WeaponUnequip)
+    {
+        if (const AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+        {
+            FTimerHandle WeaponSwapDelegate;
+            const float UnequipAnimTime = FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(GetStaticWeaponData()->WeaponUnequip, 1.0f);
+            FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(InventoryComponent, &UInventoryComponent::UnequipReturn);
+            GetWorld()->GetTimerManager().SetTimer(WeaponSwapDelegate, TimerDelegate, UnequipAnimTime, false, UnequipAnimTime);
+        }
     }
 }
 

@@ -132,6 +132,11 @@ void UInventoryComponent::StarterWeapon()
 
 void UInventoryComponent::Server_SwapWeapon_Implementation(const int SlotId)
 {
+	SwapWeapon(SlotId);
+}
+
+void UInventoryComponent::SwapWeapon(const int SlotId)
+{
 	// Returning if the target weapon is already equipped or it does not exist
 	if (CurrentWeaponSlot == SlotId)
 	{
@@ -150,7 +155,7 @@ void UInventoryComponent::Server_SwapWeapon_Implementation(const int SlotId)
 			CurrentWeapon->SetCanFire(false);
 			bPerformingWeaponSwap = true;
 			TargetWeaponSlot = SlotId;
-			HandleUnequip();
+			CurrentWeapon->HandleUnequip(this);
 			return;
 		}
 	}
@@ -162,7 +167,6 @@ void UInventoryComponent::Server_SwapWeapon_Implementation(const int SlotId)
 		CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
 		CurrentWeapon->SetActorHiddenInGame(true);
 		CurrentWeapon->SetCanFire(true);
-
 		CurrentWeapon->StopFire();
 		CurrentWeapon->Server_StopFire();
 	}
@@ -177,78 +181,12 @@ void UInventoryComponent::Server_SwapWeapon_Implementation(const int SlotId)
 		{
 			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
 			{
-				FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
 				FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
-				FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
+				CurrentWeapon->Multi_SwapWeaponAnim();
 			}
 		}
 	}
-
 	bPerformingWeaponSwap = false;
-}
-
-void UInventoryComponent::SwapWeapon(const int SlotId)
-{
-	if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
-	{
-		// Returning if the target weapon is already equipped or it does not exist
-		if (CurrentWeaponSlot == SlotId)
-		{
-			return;
-		}
-		if (!EquippedWeapons.Contains(SlotId))
-		{
-			return;
-		}
-		if (!bPerformingWeaponSwap)
-		{
-			if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
-			{
-				CurrentWeapon->StopFire();
-				CurrentWeapon->Server_StopFire();
-				CurrentWeapon->SetCanFire(false);
-				bPerformingWeaponSwap = true;
-				TargetWeaponSlot = SlotId;
-				HandleUnequip();
-				return;
-			}
-		}
-		CurrentWeaponSlot = SlotId;
-
-		// Disabling the currently equipped weapon, if it exists
-		if (CurrentWeapon)
-		{
-			CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
-			CurrentWeapon->SetActorHiddenInGame(true);
-			CurrentWeapon->SetCanFire(true);
-
-			CurrentWeapon->StopFire();
-			CurrentWeapon->Server_StopFire();
-		}
-
-		// Swapping to the new weapon, enabling it and playing it's equip animation
-		CurrentWeapon = EquippedWeapons[SlotId];
-		if (CurrentWeapon)
-		{
-			CurrentWeapon->PrimaryActorTick.bCanEverTick = true;
-			CurrentWeapon->SetActorHiddenInGame(false);
-			if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
-			{
-				if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
-				{
-					FPSCharacter->GetHandsMesh()->GetAnimInstance()->StopAllMontages(0.1f);
-					FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
-					FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponEquip, 1.0f);
-				}
-			}
-		}
-
-		bPerformingWeaponSwap = false;
-	}
-	else
-	{
-		Server_SwapWeapon(SlotId);
-	}
 }
 
 void UInventoryComponent::SpawnWeapon(TSubclassOf<AWeaponBase> NewWeapon, const int InventoryPosition, const bool bSpawnPickup,
@@ -411,32 +349,9 @@ void UInventoryComponent::Inspect()
 	}
 }
 
-void UInventoryComponent::HandleUnequip_Implementation()
-{
-	UE_LOG(LogTemp, Warning, TEXT("HandleUnequip"));
-	if (CurrentWeapon)
-	{
-		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
-		{
-			if (const AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
-			{
-				const float AnimTime = FPSCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(CurrentWeapon->GetStaticWeaponData()->WeaponUnequip, 1.0f);
-				GetWorld()->GetTimerManager().SetTimer(WeaponSwapDelegate, this, &UInventoryComponent::UnequipReturn, AnimTime, false, AnimTime);
-			}
-		}
-	}
-}
-
 void UInventoryComponent::UnequipReturn()
 {
-	if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
-	{
 		SwapWeapon(TargetWeaponSlot);
-	}
-	else
-	{
-		Server_SwapWeapon(TargetWeaponSlot);
-	}
 }
 
 void UInventoryComponent::SetupInputComponent(UEnhancedInputComponent *PlayerInputComponent)
@@ -450,13 +365,27 @@ void UInventoryComponent::SetupInputComponent(UEnhancedInputComponent *PlayerInp
 	if (PrimaryWeaponAction)
 	{
 		// Switching to the primary weapon
-		PlayerInputComponent->BindAction(PrimaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::SwapWeapon<0>);
+		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+		{
+			PlayerInputComponent->BindAction(PrimaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::SwapWeapon<0>);
+		}
+		else
+		{
+			PlayerInputComponent->BindAction(PrimaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::Server_SwapWeapon<0>);
+		}
 	}
 
 	if (SecondaryWeaponAction)
 	{
 		// Switching to the secondary weapon
-		PlayerInputComponent->BindAction(SecondaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::SwapWeapon<1>);
+		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
+		{
+			PlayerInputComponent->BindAction(SecondaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::SwapWeapon<1>);
+		}
+		else
+		{
+			PlayerInputComponent->BindAction(SecondaryWeaponAction, ETriggerEvent::Started, this, &UInventoryComponent::Server_SwapWeapon<1>);
+		}
 	}
 
 	if (ScrollAction)
