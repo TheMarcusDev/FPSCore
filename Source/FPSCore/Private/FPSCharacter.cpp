@@ -614,7 +614,24 @@ void AFPSCharacter::Multi_UpdateMovementState_Implementation(const EMovementStat
         {
             if (InventoryComponent->GetCurrentWeapon())
             {
-                InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                // Check if AnimationWaitDelay timer is active and get its remaining time
+                float RemainingTime = 0.0f;
+                ActiveTimer = InventoryComponent->GetCurrentWeapon()->GetAnimationWaitDelay();
+                RemainingTime = GetWorld()->GetTimerManager().GetTimerRemaining(ActiveTimer);
+                if (GetWorld()->GetTimerManager().IsTimerActive(ActiveTimer))
+                {
+                    FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
+                    if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
+                    {
+                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
+                        GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
+                        GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
+                    }
+                }
+                else
+                {
+                    InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                }
                 InventoryComponent->GetCurrentWeapon()->SetCanReload(MovementDataMap[MovementState].bCanReload);
             }
         }
@@ -666,7 +683,24 @@ void AFPSCharacter::Server_UpdateMovementState_Implementation(const EMovementSta
         {
             if (InventoryComponent->GetCurrentWeapon())
             {
-                InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                // Check if AnimationWaitDelay timer is active and get its remaining time
+                float RemainingTime = 0.0f;
+                ActiveTimer = InventoryComponent->GetCurrentWeapon()->GetAnimationWaitDelay();
+                RemainingTime = GetWorld()->GetTimerManager().GetTimerRemaining(ActiveTimer);
+                if (GetWorld()->GetTimerManager().IsTimerActive(ActiveTimer))
+                {
+                    FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
+                    if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
+                    {
+                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
+                        GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
+                        GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
+                    }
+                }
+                else
+                {
+                    InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                }
                 InventoryComponent->GetCurrentWeapon()->SetCanReload(MovementDataMap[MovementState].bCanReload);
             }
         }
@@ -720,7 +754,24 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
         {
             if (InventoryComponent->GetCurrentWeapon())
             {
-                InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                // Check if AnimationWaitDelay timer is active and get its remaining time
+                float RemainingTime = 0.0f;
+                ActiveTimer = InventoryComponent->GetCurrentWeapon()->GetAnimationWaitDelay();
+                RemainingTime = GetWorld()->GetTimerManager().GetTimerRemaining(ActiveTimer);
+                if (GetWorld()->GetTimerManager().IsTimerActive(ActiveTimer))
+                {
+                    FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
+                    if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
+                    {
+                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
+                        GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
+                        GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
+                    }
+                }
+                else
+                {
+                    InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
+                }
                 InventoryComponent->GetCurrentWeapon()->SetCanReload(MovementDataMap[MovementState].bCanReload);
             }
         }
@@ -758,6 +809,14 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
     else
     {
         Multi_UpdateMovementState(NewMovementState);
+    }
+}
+
+void AFPSCharacter::EnableWeaponFire()
+{
+    if (InventoryComponent && InventoryComponent->GetCurrentWeapon())
+    {
+        InventoryComponent->GetCurrentWeapon()->SetCanFire(MovementDataMap[MovementState].bCanFire);
     }
 }
 

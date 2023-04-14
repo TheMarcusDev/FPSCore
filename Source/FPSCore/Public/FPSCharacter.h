@@ -194,6 +194,8 @@ protected:
 	void Server_UpdateMovementState(EMovementState NewMovementState);
 	void Server_UpdateMovementState_Implementation(EMovementState NewMovementState);
 
+	void EnableWeaponFire();
+
 	/** The character's FPS camera component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Components")
 	UCameraComponent *CameraComponent;
@@ -521,6 +523,10 @@ private:
 	/** A reference to the player's Inventory Component */
 	UPROPERTY()
 	UInventoryComponent *InventoryComponent;
+
+	FTimerHandle WaitForAnim;
+	
+	FTimerHandle ActiveTimer;
 
 #pragma endregion
 

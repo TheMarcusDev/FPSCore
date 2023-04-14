@@ -635,6 +635,9 @@ class FPSCORE_API AWeaponBase : public AActor
 	GENERATED_BODY()
 
 public:
+	/** Returns the Current Animation Delay Active */
+	FTimerHandle &GetAnimationWaitDelay() { return AnimationWaitDelay; }
+
 	/** Returns the runtime weapon data of the weapon */
 	FRuntimeWeaponData *GetRuntimeWeaponData() { return &GeneralWeaponData; }
 
@@ -756,8 +759,8 @@ public:
 	void Multi_SwapWeaponAnim_Implementation();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void HandleUnequip(UInventoryComponent * InventoryComponent);
-	void HandleUnequip_Implementation(UInventoryComponent * InventoryComponent);
+	void HandleUnequip(UInventoryComponent *InventoryComponent);
+	void HandleUnequip_Implementation(UInventoryComponent *InventoryComponent);
 
 protected:
 	/** Multicast of the firing function */

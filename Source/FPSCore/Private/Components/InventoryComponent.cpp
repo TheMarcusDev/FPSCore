@@ -351,7 +351,7 @@ void UInventoryComponent::Inspect()
 
 void UInventoryComponent::UnequipReturn()
 {
-		SwapWeapon(TargetWeaponSlot);
+	SwapWeapon(TargetWeaponSlot);
 }
 
 void UInventoryComponent::SetupInputComponent(UEnhancedInputComponent *PlayerInputComponent)
