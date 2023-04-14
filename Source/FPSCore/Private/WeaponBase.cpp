@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "Math/UnrealMathUtility.h"
 #include "FPSCharacterController.h"
 #include "FPSCharacter.h"
@@ -384,6 +385,7 @@ void AWeaponBase::Fire(FVector CameraLocation, FRotator CameraRotation)
 
         const int NumberOfShots = WeaponData.bIsShotgun ? WeaponData.ShotgunPellets : 1;
         // We run this for the number of bullets/projectiles per shot, in order to support shotguns
+
         for (int i = 0; i < NumberOfShots; i++)
         {
 
@@ -479,14 +481,15 @@ void AWeaponBase::Fire(FVector CameraLocation, FRotator CameraRotation)
                     }
                 }
             }
+            Multi_Fire(Hit);
         }
+        Multi_FireOnce();
         if (!WeaponData.bAutomaticFire)
         {
             VerticalRecoilTimeline.Stop();
             HorizontalRecoilTimeline.Stop();
             RecoilRecovery();
         }
-        Multi_Fire(Hit);
 
         if (!WeaponData.bIsShotgun)
         {
@@ -549,80 +552,88 @@ bool AWeaponBase::Multi_Fire_Validate(FHitResult HitResult)
 }
 void AWeaponBase::Multi_Fire_Implementation(FHitResult HitResult)
 {
-    // Casting to the player character
-    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
+    FRotator EjectionSpawnVector = FRotator::ZeroRotator;
+    EjectionSpawnVector.Yaw = 270.0f;
+    UNiagaraFunctionLibrary::SpawnSystemAttached(EjectedCasing, MagazineAttachment, FName("ejection_port"), FVector::ZeroVector, EjectionSpawnVector, EAttachLocation::SnapToTarget, true, true);
 
-    const int NumberOfShots = WeaponData.bIsShotgun ? WeaponData.ShotgunPellets : 1;
-    // We run this for the number of bullets/projectiles per shot, in order to support shotguns
-    for (int i = 0; i < NumberOfShots; i++)
+    EndPoint = HitResult.Location;
+
+    const FRotator ParticleRotation = (EndPoint - (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation))).Rotation();
+
+    // Spawning the bullet trace particle effect
+    if (WeaponData.bHasAttachments)
     {
-        // Playing an animation on the weapon mesh
-        if (!WeaponData.bIsShotgun)
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace, BarrelAttachment->GetSocketLocation(WeaponData.ParticleSpawnLocation), ParticleRotation);
+    }
+    else
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace, MeshComp->GetSocketLocation(WeaponData.ParticleSpawnLocation), ParticleRotation);
+    }
+
+    // Selecting the hit effect based on the hit physical surface material (hit.PhysMaterial.Get()) and spawning it (Niagara)
+
+    if (HitResult.PhysMaterial.Get() == WeaponData.NormalDamageSurface || HitResult.PhysMaterial.Get() == WeaponData.HeadshotDamageSurface)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.EnemyHitEffect, HitResult.GetComponent(), "", HitResult.ImpactPoint, FRotator::ZeroRotator, EAttachLocation::KeepWorldPosition, false);
+    }
+
+    else if (HitResult.PhysMaterial.Get() == WeaponData.GroundSurface)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.GroundHitEffect, HitResult.GetComponent(), "", HitResult.ImpactPoint, FRotator::ZeroRotator, EAttachLocation::KeepWorldPosition, false);
+    }
+    else if (HitResult.PhysMaterial.Get() == WeaponData.RockSurface)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.RockHitEffect, HitResult.GetComponent(), "", HitResult.ImpactPoint, FRotator::ZeroRotator, EAttachLocation::KeepWorldPosition, false);
+    }
+    else
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.DefaultHitEffect, HitResult.GetComponent(), "", HitResult.ImpactPoint, FRotator::ZeroRotator, EAttachLocation::KeepWorldPosition, false);
+    }
+}
+
+bool AWeaponBase::Multi_FireOnce_Validate()
+{
+    return true;
+}
+void AWeaponBase::Multi_FireOnce_Implementation()
+{
+    // Playing an animation on the weapon mesh
+    if (!WeaponData.bIsShotgun)
+    {
+        if (WeaponData.Gun_Shot)
         {
-            if (WeaponData.Gun_Shot)
+            MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+            TPMeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+        }
+    }
+    else
+    {
+        if (WeaponData.Gun_Shot)
+        {
+            if (!ShotGunFiredFirstShot)
             {
                 MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
                 TPMeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
+                ShotGunFiredFirstShot = true;
             }
-        }
-        else
-        {
-            if (WeaponData.Gun_Shot)
+            else
             {
-                if (!ShotGunFiredFirstShot)
-                {
-                    MeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
-                    TPMeshComp->PlayAnimation(WeaponData.Gun_Shot, false);
-                    ShotGunFiredFirstShot = true;
-                }
-                else
-                {
-                    MeshComp->PlayAnimation(WeaponData.ShotGun_Shot2, false);
-                    TPMeshComp->PlayAnimation(WeaponData.ShotGun_Shot2, false);
-                    ShotGunFiredFirstShot = false;
-                }
+                MeshComp->PlayAnimation(WeaponData.ShotGun_Shot2, false);
+                TPMeshComp->PlayAnimation(WeaponData.ShotGun_Shot2, false);
+                ShotGunFiredFirstShot = false;
             }
         }
+    }
 
-        if (WeaponData.Player_Shot)
+    if (WeaponData.Player_Shot)
+    {
+        if (AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner()))
         {
             AnimTime = PlayerCharacter->GetHandsMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
             AnimTime = PlayerCharacter->GetThirdPersonMesh()->GetAnimInstance()->Montage_Play(WeaponData.Player_Shot, 1.0f);
         }
-
-        EndPoint = HitResult.Location;
-
-        const FRotator ParticleRotation = (EndPoint - (WeaponData.bHasAttachments ? BarrelAttachment->GetSocketLocation(WeaponData.MuzzleLocation) : MeshComp->GetSocketLocation(WeaponData.MuzzleLocation))).Rotation();
-
-        // Spawning the bullet trace particle effect
-        if (WeaponData.bHasAttachments)
-        {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace, BarrelAttachment->GetSocketLocation(WeaponData.ParticleSpawnLocation), ParticleRotation);
-        }
-        else
-        {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.BulletTrace, MeshComp->GetSocketLocation(WeaponData.ParticleSpawnLocation), ParticleRotation);
-        }
-
-        // Selecting the hit effect based on the hit physical surface material (hit.PhysMaterial.Get()) and spawning it (Niagara)
-
-        if (HitResult.PhysMaterial.Get() == WeaponData.NormalDamageSurface || HitResult.PhysMaterial.Get() == WeaponData.HeadshotDamageSurface)
-        {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.EnemyHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
-        }
-        else if (HitResult.PhysMaterial.Get() == WeaponData.GroundSurface)
-        {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.GroundHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
-        }
-        else if (HitResult.PhysMaterial.Get() == WeaponData.RockSurface)
-        {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.RockHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
-        }
-        else
-        {
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WeaponData.DefaultHitEffect, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
-        }
     }
+
     if (WeaponData.bHasAttachments)
     {
         UNiagaraFunctionLibrary::SpawnSystemAttached(WeaponData.MuzzleFlash, BarrelAttachment, WeaponData.ParticleSpawnLocation, FVector::ZeroVector, BarrelAttachment->GetSocketRotation(WeaponData.ParticleSpawnLocation), EAttachLocation::SnapToTarget, true);
@@ -641,10 +652,6 @@ void AWeaponBase::Multi_Fire_Implementation(FHitResult HitResult)
     {
         UGameplayStatics::PlaySoundAtLocation(GetWorld(), WeaponData.FireSound, MeshComp->GetSocketLocation(WeaponData.MuzzleLocation));
     }
-
-    FRotator EjectionSpawnVector = FRotator::ZeroRotator;
-    EjectionSpawnVector.Yaw = 270.0f;
-    UNiagaraFunctionLibrary::SpawnSystemAttached(EjectedCasing, MagazineAttachment, FName("ejection_port"), FVector::ZeroVector, EjectionSpawnVector, EAttachLocation::SnapToTarget, true, true);
 }
 
 bool AWeaponBase::Multi_Fire_NoBullets_Validate()

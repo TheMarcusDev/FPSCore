@@ -623,7 +623,6 @@ void AFPSCharacter::Multi_UpdateMovementState_Implementation(const EMovementStat
                     FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
                     if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
                     {
-                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
                         GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
                         GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
                     }
@@ -763,7 +762,6 @@ void AFPSCharacter::UpdateMovementState(const EMovementState NewMovementState)
                     FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
                     if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
                     {
-                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
                         GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
                         GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
                     }

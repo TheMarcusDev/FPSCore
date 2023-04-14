@@ -7,6 +7,7 @@
 #include "Components/TimelineComponent.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/Actor.h"
+#include "NiagaraComponent.h"
 #include "WeaponBase.generated.h"
 
 class AWeaponBase;
@@ -768,6 +769,12 @@ protected:
 	void Multi_Fire(FHitResult HitResult);
 	bool Multi_Fire_Validate(FHitResult HitResult);
 	void Multi_Fire_Implementation(FHitResult HitResult);
+
+	/** Multicast of the firing function for things that shouldn't run more than once in case of shotguns */
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void Multi_FireOnce();
+	bool Multi_FireOnce_Validate();
+	void Multi_FireOnce_Implementation();
 
 	/** Multicast of the firing function with no bullets */
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
