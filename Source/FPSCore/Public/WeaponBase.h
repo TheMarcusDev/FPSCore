@@ -733,10 +733,10 @@ public:
 	float GetVerticalCameraOffset() const { return VerticalCameraOffset; }
 
 	/** RPC of the stop fire function */
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_StopFire();
-	bool Server_StopFire_Validate();
-	void Server_StopFire_Implementation();
+	UFUNCTION(Client, Reliable, WithValidation)
+	void Client_StopFire();
+	bool Client_StopFire_Validate();
+	void Client_StopFire_Implementation();
 
 	/** The main skeletal mesh - holds the weapon model */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -789,16 +789,28 @@ protected:
 	void Multi_Reload_Implementation();
 
 	/** RPC of the StartRecoil function */
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_StartRecoil();
-	bool Server_StartRecoil_Validate();
-	void Server_StartRecoil_Implementation();
+	UFUNCTION(Client, Reliable, WithValidation)
+	void Client_StartRecoil();
+	bool Client_StartRecoil_Validate();
+	void Client_StartRecoil_Implementation();
 
 	/** RPC of the Recoil function */
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_Recoil();
-	bool Server_Recoil_Validate();
-	void Server_Recoil_Implementation();
+	UFUNCTION(Client, Reliable, WithValidation)
+	void Client_Recoil();
+	bool Client_Recoil_Validate();
+	void Client_Recoil_Implementation();
+
+	/** RPC of the RecoilRecovery function */
+	UFUNCTION(Client, Reliable, WithValidation)
+	void Client_RecoilRecovery();
+	bool Client_RecoilRecovery_Validate();
+	void Client_RecoilRecovery_Implementation();
+
+	/** RPC of the RecoilRecovery function */
+	UFUNCTION(Client, Reliable, WithValidation)
+	void Client_HandleRecoveryProgress(float Value) const;
+	bool Client_HandleRecoveryProgress_Validate(float Value) const;
+	void Client_HandleRecoveryProgress_Implementation(float Value) const;
 
 	/** The skeletal mesh used to hold the current barrel attachment */
 	UPROPERTY(BlueprintReadOnly, Category = "Components")

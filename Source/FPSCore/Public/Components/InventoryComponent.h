@@ -198,9 +198,6 @@ private:
 	void ScrollWeapon(const FInputActionValue &Value);
 	void ScrollWeapon_Implementation(const FInputActionValue &Value);
 
-	/** Stops firing the weapon */
-	void StopFire();
-
 	/** Plays an inspect animation on the weapon */
 	void Inspect();
 

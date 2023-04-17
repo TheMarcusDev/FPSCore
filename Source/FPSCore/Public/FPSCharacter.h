@@ -171,6 +171,9 @@ protected:
 	/** Calling Fire Function */
 	void Fire();
 
+	/** Calling StopFire Function */
+	void StopFire();
+
 	/** Calling Reload Function */
 	void Reload();
 
@@ -179,6 +182,12 @@ protected:
 	void Server_Fire(FVector CameraLocation, FRotator CameraRotation);
 	bool Server_Fire_Validate(FVector CameraLocation, FRotator CameraRotation);
 	void Server_Fire_Implementation(FVector CameraLocation, FRotator CameraRotation);
+
+	/** Calling RPC of firing function */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_StopFire();
+	bool Server_StopFire_Validate();
+	void Server_StopFire_Implementation();
 
 	/** Calling RPC of reloading function */
 	UFUNCTION(Server, Reliable, WithValidation)

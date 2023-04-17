@@ -139,7 +139,7 @@ void AWeaponBase::BeginPlay()
     if (RecoveryCurve)
     {
         FOnTimelineFloat RecoveryProgressFunction;
-        RecoveryProgressFunction.BindUFunction(this, FName("HandleRecoveryProgress"));
+        RecoveryProgressFunction.BindUFunction(this, FName("Client_HandleRecoveryProgress"));
         RecoilRecoveryTimeline.AddInterpFloat(RecoveryCurve, RecoveryProgressFunction);
     }
 
@@ -295,7 +295,7 @@ void AWeaponBase::StartFire(FVector CameraLocation, FRotator CameraRotation)
 
         // Simultaneously begins to play the recoil timeline
 
-        Server_StartRecoil();
+        Client_StartRecoil();
     }
 }
 
@@ -316,12 +316,12 @@ void AWeaponBase::StartRecoil()
     }
 }
 
-bool AWeaponBase::Server_StartRecoil_Validate()
+bool AWeaponBase::Client_StartRecoil_Validate()
 {
     return true;
 }
 
-void AWeaponBase::Server_StartRecoil_Implementation()
+void AWeaponBase::Client_StartRecoil_Implementation()
 {
     StartRecoil();
 }
@@ -342,7 +342,7 @@ void AWeaponBase::StopFire()
     // Stops the gun firing (for automatic fire)
     VerticalRecoilTimeline.Stop();
     HorizontalRecoilTimeline.Stop();
-    RecoilRecovery();
+    Client_RecoilRecovery();
     ShotsFired = 0;
 
     if (WeaponData.bPreventRapidManualFire && bHasFiredRecently)
@@ -355,12 +355,12 @@ void AWeaponBase::StopFire()
     GetWorldTimerManager().ClearTimer(ShotDelay);
 }
 
-bool AWeaponBase::Server_StopFire_Validate()
+bool AWeaponBase::Client_StopFire_Validate()
 {
     return true;
 }
 
-void AWeaponBase::Server_StopFire_Implementation()
+void AWeaponBase::Client_StopFire_Implementation()
 {
     StopFire();
 }
@@ -405,7 +405,7 @@ void AWeaponBase::Fire(FVector CameraLocation, FRotator CameraRotation)
             TraceEnd = TraceStart + (TraceDirection * (WeaponData.bIsShotgun ? WeaponData.ShotgunRange : WeaponData.LengthMultiplier));
 
             // Applying Recoil to the weapon
-            Recoil();
+            Client_Recoil();
 
             EndPoint = TraceEnd;
 
@@ -488,7 +488,7 @@ void AWeaponBase::Fire(FVector CameraLocation, FRotator CameraRotation)
         {
             VerticalRecoilTimeline.Stop();
             HorizontalRecoilTimeline.Stop();
-            RecoilRecovery();
+            Client_RecoilRecovery();
         }
 
         if (!WeaponData.bIsShotgun)
@@ -689,33 +689,14 @@ void AWeaponBase::Recoil()
     }
 }
 
-bool AWeaponBase::Server_Recoil_Validate()
+bool AWeaponBase::Client_Recoil_Validate()
 {
     return true;
 }
 
-void AWeaponBase::Server_Recoil_Implementation()
+void AWeaponBase::Client_Recoil_Implementation()
 {
-    AFPSCharacter *PlayerCharacter = Cast<AFPSCharacter>(GetOwner());
-    AFPSCharacterController *CharacterController = Cast<AFPSCharacterController>(PlayerCharacter->GetController());
-
-    // Apply recoil by adding a pitch and yaw input to the character controller
-    if (WeaponData.bAutomaticFire && CharacterController && ShotsFired > 0 && IsValid(WeaponData.VerticalRecoilCurve) && IsValid(WeaponData.HorizontalRecoilCurve))
-    {
-        CharacterController->AddPitchInput(WeaponData.VerticalRecoilCurve->GetFloatValue(VerticalRecoilTimeline.GetPlaybackPosition()) * VerticalRecoilModifier);
-        CharacterController->AddYawInput(WeaponData.HorizontalRecoilCurve->GetFloatValue(HorizontalRecoilTimeline.GetPlaybackPosition()) * HorizontalRecoilModifier);
-    }
-    else if (CharacterController && ShotsFired <= 0 && IsValid(WeaponData.VerticalRecoilCurve) && IsValid(WeaponData.HorizontalRecoilCurve))
-    {
-        CharacterController->AddPitchInput(WeaponData.VerticalRecoilCurve->GetFloatValue(0) * VerticalRecoilModifier);
-        CharacterController->AddYawInput(WeaponData.HorizontalRecoilCurve->GetFloatValue(0) * HorizontalRecoilModifier);
-    }
-
-    ShotsFired += 1;
-    if (CharacterController)
-    {
-        CharacterController->ClientStartCameraShake(WeaponData.RecoilCameraShake);
-    }
+    Recoil();
 }
 
 void AWeaponBase::RecoilRecovery()
@@ -725,6 +706,16 @@ void AWeaponBase::RecoilRecovery()
     {
         RecoilRecoveryTimeline.PlayFromStart();
     }
+}
+
+bool AWeaponBase::Client_RecoilRecovery_Validate()
+{
+    return true;
+}
+
+void AWeaponBase::Client_RecoilRecovery_Implementation()
+{
+    RecoilRecovery();
 }
 
 bool AWeaponBase::Reload()
@@ -945,4 +936,14 @@ void AWeaponBase::HandleRecoveryProgress(float Value) const
     const FRotator NewControlRotation = FMath::Lerp(CharacterController->GetControlRotation(), ControlRotation, Value);
 
     CharacterController->SetControlRotation(NewControlRotation);
+}
+
+bool AWeaponBase::Client_HandleRecoveryProgress_Validate(float Value) const
+{
+    return true;
+}
+
+void AWeaponBase::Client_HandleRecoveryProgress_Implementation(float Value) const
+{
+    HandleRecoveryProgress(Value);
 }

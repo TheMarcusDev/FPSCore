@@ -108,6 +108,24 @@ void AFPSCharacter::PawnClientRestart()
 {
     Super::PawnClientRestart();
 
+    FTimerHandle TimerHandle;
+    GetWorldTimerManager().SetTimer(
+        TimerHandle, [this]()
+        {
+    if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
+    {
+        InventoryComponent = InventoryComp;
+        TMap<int, AWeaponBase *> EquippedWeapons = InventoryComponent->GetEquippedWeapons();
+        for (int i = 0; i < EquippedWeapons.Num(); i++)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Runtime ClipCapacity is %i"), EquippedWeapons[i]->GetRuntimeWeaponData()->ClipCapacity);
+            UE_LOG(LogTemp, Warning, TEXT("Static ClipCapacity is %i"), EquippedWeapons[i]->GetStaticWeaponData()->ClipCapacity);
+            EquippedWeapons[i]->GetRuntimeWeaponData()->ClipCapacity = EquippedWeapons[i]->GetStaticWeaponData()->ClipCapacity;
+            EquippedWeapons[i]->GetRuntimeWeaponData()->ClipSize = EquippedWeapons[i]->GetStaticWeaponData()->ClipSize;
+        }
+    } },
+        1.0f, false);
+
     // Make sure that we have a valid PlayerController.
     if (const AFPSCharacterController *PlayerController = Cast<AFPSCharacterController>(GetController()))
     {
@@ -691,7 +709,6 @@ void AFPSCharacter::Server_UpdateMovementState_Implementation(const EMovementSta
                     FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
                     if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
                     {
-                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
                         GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
                         GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
                     }
@@ -994,6 +1011,8 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCompon
         {
             // Firing
             PlayerEnhancedInputComponent->BindAction(FiringAction, ETriggerEvent::Started, this, &AFPSCharacter::Fire);
+            PlayerEnhancedInputComponent->BindAction(FiringAction, ETriggerEvent::Completed, this, &AFPSCharacter::StopFire);
+
         }
         if (ReloadAction)
         {
@@ -1033,6 +1052,32 @@ void AFPSCharacter::Server_Fire_Implementation(FVector CameraLocation, FRotator 
     {
         InventoryComponent->GetCurrentWeapon()->StartFire(CameraLocation, CameraRotation);
     }
+}
+
+void AFPSCharacter::StopFire()
+{
+    if (HasAuthority())
+    {
+	if (InventoryComponent->GetCurrentWeapon())
+	{
+		InventoryComponent->GetCurrentWeapon()->StopFire();
+	}
+    } else {
+        Server_StopFire();
+    }
+}
+
+bool AFPSCharacter::Server_StopFire_Validate()
+{
+    return true;
+}
+
+void AFPSCharacter::Server_StopFire_Implementation()
+{
+	if (InventoryComponent->GetCurrentWeapon())
+	{
+		InventoryComponent->GetCurrentWeapon()->Client_StopFire();
+	}
 }
 
 void AFPSCharacter::Reload()
