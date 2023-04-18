@@ -97,6 +97,7 @@ void AFPSCharacter::BeginPlay()
 
     if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
     {
+        InventoryComponent = InventoryComp;
         if (AWeaponBase *CurrentWeapon = InventoryComponent->GetCurrentWeapon())
         {
             CurrentWeapon->SetTPAttachment();
@@ -107,24 +108,6 @@ void AFPSCharacter::BeginPlay()
 void AFPSCharacter::PawnClientRestart()
 {
     Super::PawnClientRestart();
-
-    FTimerHandle TimerHandle;
-    GetWorldTimerManager().SetTimer(
-        TimerHandle, [this]()
-        {
-    if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
-    {
-        InventoryComponent = InventoryComp;
-        TMap<int, AWeaponBase *> EquippedWeapons = InventoryComponent->GetEquippedWeapons();
-        for (int i = 0; i < EquippedWeapons.Num(); i++)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Runtime ClipCapacity is %i"), EquippedWeapons[i]->GetRuntimeWeaponData()->ClipCapacity);
-            UE_LOG(LogTemp, Warning, TEXT("Static ClipCapacity is %i"), EquippedWeapons[i]->GetStaticWeaponData()->ClipCapacity);
-            EquippedWeapons[i]->GetRuntimeWeaponData()->ClipCapacity = EquippedWeapons[i]->GetStaticWeaponData()->ClipCapacity;
-            EquippedWeapons[i]->GetRuntimeWeaponData()->ClipSize = EquippedWeapons[i]->GetStaticWeaponData()->ClipSize;
-        }
-    } },
-        1.0f, false);
 
     // Make sure that we have a valid PlayerController.
     if (const AFPSCharacterController *PlayerController = Cast<AFPSCharacterController>(GetController()))
