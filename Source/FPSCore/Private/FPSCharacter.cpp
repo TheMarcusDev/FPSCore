@@ -31,10 +31,10 @@ AFPSCharacter::AFPSCharacter()
 
     // Spawning the camera atop the FPS hands mesh
     CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
-    CameraComponent->SetupAttachment(RootComponent);
+    CameraComponent->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
     CameraComponent->bUsePawnControlRotation = true;
 
-    // Spawning the FPS hands mesh component and attaching it to the spring arm component
+    // Spawning the FPS hands mesh component and attaching it to the camera component
     HandsMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
     HandsMeshComp->CastShadow = false;
     HandsMeshComp->bOnlyOwnerSee = true;
@@ -77,6 +77,8 @@ void AFPSCharacter::BeginPlay()
         UE_LOG(LogProfilingDebugging, Error, TEXT("Set up data in MovementDataMap! BeginPlay"));
     }
 
+    DefaultCameraOffset = CameraComponent->GetRelativeLocation().Z; // Setting the default location of the camera
+
     // Binding a timeline to our vaulting curve
     if (VaultTimelineCurve)
     {
@@ -92,8 +94,8 @@ void AFPSCharacter::BeginPlay()
         InventoryComponent->GetEquippedWeapons().Reserve(InventoryComponent->GetNumberOfWeaponSlots());
     }
 
-    // Updating the crouched spring arm height based on the crouched capsule half height
-    CrouchedSpringArmHeightDelta = CrouchedCapsuleHalfHeight - DefaultCapsuleHalfHeight;
+    // Updating the crouched Camera height based on the crouched capsule half height
+    CrouchedCameraHeightDelta = CrouchedCapsuleHalfHeight - DefaultCapsuleHalfHeight;
 
     if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
     {
@@ -178,11 +180,13 @@ void AFPSCharacter::ToggleCrouch()
     bHoldingCrouch = true;
     if (GetCharacterMovement()->IsMovingOnGround())
     {
+        float ForwardVelocity = FVector::DotProduct(GetVelocity(), GetActorForwardVector());
+        float RightVelocity = FVector::DotProduct(GetVelocity(), GetActorRightVector());
         if (MovementState == EMovementState::State_Crouch)
         {
             StopCrouch(false);
         }
-        else if (MovementState == EMovementState::State_Sprint && !bPerformedSlide && bCanSlide)
+        else if (MovementState == EMovementState::State_Sprint && !bPerformedSlide && bCanSlide && (ForwardVelocity > MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed || RightVelocity > MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed))
         {
             StartSlide();
         }
@@ -277,11 +281,16 @@ void AFPSCharacter::StartSlide()
     bIsSliding = true;
     bPerformedSlide = true;
     UpdateMovementState(EMovementState::State_Slide);
-    HandsMeshComp->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
-    ThirdPersonMesh->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
+    Multi_SlideAnim();
     GetWorldTimerManager().SetTimer(SlideStop, this, &AFPSCharacter::StopSlide, SlideTime, false, SlideTime);
     GetWorldTimerManager().SetTimer(SlideTimeOutHandler, this, &AFPSCharacter::TimeOutSlide, SlideTimeOut, false, SlideTimeOut);
     bCanSlide = false;
+}
+
+void AFPSCharacter::Multi_SlideAnim_Implementation()
+{
+    HandsMeshComp->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
+    ThirdPersonMesh->GetAnimInstance()->Montage_Play(SlideMontage, 1.0f);
 }
 
 void AFPSCharacter::TimeOutSlide()
@@ -591,6 +600,39 @@ void AFPSCharacter::Vault(const FTransform TargetTransform)
     {
         HandsMeshComp->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
         ThirdPersonMesh->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
+        if (!IsNetMode(NM_DedicatedServer) && !IsNetMode(NM_ListenServer))
+        {
+            Server_Vault(TargetTransform);
+        }
+        Multi_Vault(TargetTransform);
+    }
+    VaultTimeline.PlayFromStart();
+}
+
+void AFPSCharacter::Server_Vault_Implementation(const FTransform TargetTransform)
+{
+    // Updating our target location and playing the vault timeline from start
+    VaultStartLocation = GetActorTransform();
+    VaultEndLocation = TargetTransform;
+    UpdateMovementState(EMovementState::State_Vault);
+    if (VaultMontage)
+    {
+        HandsMeshComp->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
+        ThirdPersonMesh->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
+    }
+    VaultTimeline.PlayFromStart();
+}
+
+void AFPSCharacter::Multi_Vault_Implementation(const FTransform TargetTransform)
+{
+    // Updating our target location and playing the vault timeline from start
+    VaultStartLocation = GetActorTransform();
+    VaultEndLocation = TargetTransform;
+    UpdateMovementState(EMovementState::State_Vault);
+    if (VaultMontage)
+    {
+        HandsMeshComp->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
+        ThirdPersonMesh->GetAnimInstance()->Montage_Play(VaultMontage, 1.0f);
     }
     VaultTimeline.PlayFromStart();
 }
@@ -691,7 +733,6 @@ void AFPSCharacter::Server_UpdateMovementState_Implementation(const EMovementSta
                     FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &AFPSCharacter::EnableWeaponFire);
                     if (!GetWorld()->GetTimerManager().IsTimerActive(WaitForAnim))
                     {
-                        UE_LOG(LogTemp, Error, TEXT("SERVER TIMER FIRED AGAIN"));
                         GetWorld()->GetTimerManager().ClearTimer(WaitForAnim);
                         GetWorld()->GetTimerManager().SetTimer(WaitForAnim, TimerDelegate, RemainingTime, false);
                     }
@@ -818,6 +859,16 @@ void AFPSCharacter::EnableWeaponFire()
     }
 }
 
+void AFPSCharacter::Server_VaultTimelineTick_Implementation(const float DeltaTime)
+{
+    VaultTimeline.TickTimeline(DeltaTime);
+}
+
+void AFPSCharacter::Multi_VaultTimelineTick_Implementation(const float DeltaTime)
+{
+    VaultTimeline.TickTimeline(DeltaTime);
+}
+
 // Called every frame
 void AFPSCharacter::Tick(const float DeltaTime)
 {
@@ -825,17 +876,25 @@ void AFPSCharacter::Tick(const float DeltaTime)
 
     // Timeline tick
     VaultTimeline.TickTimeline(DeltaTime);
+    Multi_VaultTimelineTick(DeltaTime);
+    if (!IsNetMode(NM_DedicatedServer) && !IsNetMode(NM_ListenServer))
+    {
+        Server_VaultTimelineTick(DeltaTime);
+    }
 
     // Crouching
     // Sets the new Target Half Height based on whether the player is crouching or standing
     const float TargetHalfHeight = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide) ? CrouchedCapsuleHalfHeight : DefaultCapsuleHalfHeight;
-    const float SpringArmTargetOffset = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide) ? DefaultSpringArmOffset + CrouchedSpringArmHeightDelta : DefaultSpringArmOffset;
+    const float CameraTargetOffset = (MovementState == EMovementState::State_Crouch || MovementState == EMovementState::State_Slide) ? DefaultCameraOffset + CrouchedCameraHeightDelta : DefaultCameraOffset;
     // Interpolates between the current height and the target height
     const float NewHalfHeight = FMath::FInterpTo(GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), TargetHalfHeight, DeltaTime, CrouchSpeed);
-    const float NewLocation = FMath::FInterpTo(CurrentSpringArmOffset, SpringArmTargetOffset, DeltaTime, CrouchSpeed);
-    CurrentSpringArmOffset = NewLocation;
+    const float NewLocation = FMath::FInterpTo(CurrentCameraOffset, CameraTargetOffset, DeltaTime, CrouchSpeed);
+    CurrentCameraOffset = NewLocation;
     // Sets the half height of the capsule component to the new interpolated half height
     GetCapsuleComponent()->SetCapsuleHalfHeight(NewHalfHeight);
+    FVector NewCameraLocation = CameraComponent->GetRelativeLocation();
+    NewCameraLocation.Z = NewLocation;
+    CameraComponent->SetRelativeLocation(NewCameraLocation);
 
     if (bRestrictSprintAngle)
     {
@@ -892,8 +951,13 @@ void AFPSCharacter::Tick(const float DeltaTime)
     // Slide performed check, so that if the player is in the air and presses the slide key, they slide when they land
     if (GetCharacterMovement()->IsMovingOnGround() && !bPerformedSlide && bWantsToSlide)
     {
-        StartSlide();
-        bWantsToSlide = false;
+        float ForwardVelocity = FVector::DotProduct(GetVelocity(), GetActorForwardVector());
+        float RightVelocity = FVector::DotProduct(GetVelocity(), GetActorRightVector());
+        if (ForwardVelocity > MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed || RightVelocity > MovementDataMap[EMovementState::State_Walk].MaxWalkSpeed)
+        {
+            StartSlide();
+            bWantsToSlide = false;
+        }
     }
 
     // Checks whether we can vault every frame

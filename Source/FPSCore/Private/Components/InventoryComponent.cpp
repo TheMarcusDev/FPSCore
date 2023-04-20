@@ -150,7 +150,7 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 	{
 		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
 		{
-			CurrentWeapon->StopFire();
+			CurrentWeapon->Client_StopFire();
 			CurrentWeapon->Server_StopFire();
 			CurrentWeapon->SetCanFire(false);
 			bPerformingWeaponSwap = true;
@@ -168,7 +168,7 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		CurrentWeapon->SetActorHiddenInGame(true);
 		CurrentWeapon->SetCanFire(true);
 		CurrentWeapon->StopFire();
-		CurrentWeapon->Server_StopFire();
+		CurrentWeapon->Client_StopFire();
 	}
 
 	// Swapping to the new weapon, enabling it and playing it's equip animation
@@ -177,12 +177,15 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 	{
 		CurrentWeapon->PrimaryActorTick.bCanEverTick = true;
 		CurrentWeapon->SetActorHiddenInGame(false);
-		if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
+		if (!CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
 		{
-			if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+			if (CurrentWeapon->GetStaticWeaponData()->WeaponEquip)
 			{
-				FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
-				CurrentWeapon->Multi_SwapWeaponAnim();
+				if (AFPSCharacter *FPSCharacter = Cast<AFPSCharacter>(GetOwner()))
+				{
+					FPSCharacter->UpdateMovementState(FPSCharacter->GetMovementState());
+					CurrentWeapon->Multi_SwapWeaponAnim();
+				}
 			}
 		}
 	}
@@ -351,6 +354,7 @@ void UInventoryComponent::Inspect()
 
 void UInventoryComponent::UnequipReturn()
 {
+	CurrentWeapon->Multi_SwapWeaponAnim();
 	SwapWeapon(TargetWeaponSlot);
 }
 

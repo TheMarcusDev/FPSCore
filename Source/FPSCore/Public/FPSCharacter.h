@@ -194,6 +194,26 @@ protected:
 	void Server_UpdateMovementState(EMovementState NewMovementState);
 	void Server_UpdateMovementState_Implementation(EMovementState NewMovementState);
 
+	UFUNCTION(Server, Reliable)
+	void Server_Vault(const FTransform TargetTransform);
+	void Server_Vault_Implementation(const FTransform TargetTransform);
+
+	UFUNCTION(NetMultiCast, Reliable)
+	void Multi_Vault(const FTransform TargetTransform);
+	void Multi_Vault_Implementation(const FTransform TargetTransform);
+
+	UFUNCTION(Server, Reliable)
+	void Server_VaultTimelineTick(const float DeltaTime);
+	void Server_VaultTimelineTick_Implementation(const float DeltaTime);
+
+	UFUNCTION(NetMultiCast, Reliable)
+	void Multi_VaultTimelineTick(const float DeltaTime);
+	void Multi_VaultTimelineTick_Implementation(const float DeltaTime);
+
+	UFUNCTION(NetMultiCast, Reliable)
+	void Multi_SlideAnim();
+	void Multi_SlideAnim_Implementation();
+
 	void EnableWeaponFire();
 
 	/** The character's FPS camera component */
@@ -493,20 +513,20 @@ private:
 	/** The right look value (used to drive procedural weapon sway) */
 	float MouseX;
 
-	/** The change in height of the spring arm that the camera + hands rest on when the player is crouched. This
+	/** The change in height of the camera + hands rest on when the player is crouched. This
 	 *	is calculated automatically
 	 *
 	 *	In order to best line up with the crouched height, this should be equal to the
 	 *	CrouchedCapsuleHalfHeight minus the capsule's default height. For example, if the default capsule half height
-	 *	is 88.0f, and the crouched half height is 58.0f, then the crouched spring arm height delta should be -30
+	 *	is 88.0f, and the crouched half height is 58.0f, then the crouched camera height delta should be -30
 	 */
-	float CrouchedSpringArmHeightDelta;
+	float CrouchedCameraHeightDelta;
 
-	/** The default offset of the spring arm from a Z position of 0, set automatically on BeginPlay */
-	float DefaultSpringArmOffset;
+	/** The default offset of the camera from a Z position of 0, set automatically on BeginPlay */
+	float DefaultCameraOffset;
 
-	/** The current offset of the spring arm */
-	float CurrentSpringArmOffset = 0.0f;
+	/** The current offset of the camera */
+	float CurrentCameraOffset = 0.0f;
 
 	/** A user-driven FOV offset. This will apply an additional offset to the base FOV, whatever that may be. */
 	float FOVOffset;
@@ -525,7 +545,7 @@ private:
 	UInventoryComponent *InventoryComponent;
 
 	FTimerHandle WaitForAnim;
-	
+
 	FTimerHandle ActiveTimer;
 
 #pragma endregion
