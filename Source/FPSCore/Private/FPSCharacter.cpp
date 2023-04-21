@@ -99,6 +99,7 @@ void AFPSCharacter::BeginPlay()
 
     if (UInventoryComponent *InventoryComp = FindComponentByClass<UInventoryComponent>())
     {
+        InventoryComponent = InventoryComp;
         if (AWeaponBase *CurrentWeapon = InventoryComponent->GetCurrentWeapon())
         {
             CurrentWeapon->SetTPAttachment();
@@ -1058,6 +1059,7 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent *PlayerInputCompon
         {
             // Firing
             PlayerEnhancedInputComponent->BindAction(FiringAction, ETriggerEvent::Started, this, &AFPSCharacter::Fire);
+            PlayerEnhancedInputComponent->BindAction(FiringAction, ETriggerEvent::Completed, this, &AFPSCharacter::StopFire);
         }
         if (ReloadAction)
         {
@@ -1096,6 +1098,34 @@ void AFPSCharacter::Server_Fire_Implementation(FVector CameraLocation, FRotator 
     if (InventoryComponent->GetCurrentWeapon())
     {
         InventoryComponent->GetCurrentWeapon()->StartFire(CameraLocation, CameraRotation);
+    }
+}
+
+void AFPSCharacter::StopFire()
+{
+    if (HasAuthority())
+    {
+        if (InventoryComponent->GetCurrentWeapon())
+        {
+            InventoryComponent->GetCurrentWeapon()->StopFire();
+        }
+    }
+    else
+    {
+        Server_StopFire();
+    }
+}
+
+bool AFPSCharacter::Server_StopFire_Validate()
+{
+    return true;
+}
+
+void AFPSCharacter::Server_StopFire_Implementation()
+{
+    if (InventoryComponent->GetCurrentWeapon())
+    {
+        InventoryComponent->GetCurrentWeapon()->Client_StopFire();
     }
 }
 

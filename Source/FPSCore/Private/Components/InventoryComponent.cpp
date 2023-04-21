@@ -151,7 +151,6 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		if (CurrentWeapon->GetStaticWeaponData()->WeaponUnequip)
 		{
 			CurrentWeapon->Client_StopFire();
-			CurrentWeapon->Server_StopFire();
 			CurrentWeapon->SetCanFire(false);
 			bPerformingWeaponSwap = true;
 			TargetWeaponSlot = SlotId;
@@ -167,7 +166,6 @@ void UInventoryComponent::SwapWeapon(const int SlotId)
 		CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
 		CurrentWeapon->SetActorHiddenInGame(true);
 		CurrentWeapon->SetCanFire(true);
-		CurrentWeapon->StopFire();
 		CurrentWeapon->Client_StopFire();
 	}
 
@@ -272,7 +270,7 @@ void UInventoryComponent::UpdateWeapon(AWeaponBase *SpawnedWeapon, const int Inv
 		{
 			CurrentWeapon->PrimaryActorTick.bCanEverTick = false;
 			CurrentWeapon->SetActorHiddenInGame(true);
-			CurrentWeapon->StopFire();
+			CurrentWeapon->Client_StopFire();
 		}
 
 		// Swapping to the new weapon, enabling it and playing it's equip animation
@@ -318,22 +316,6 @@ FText UInventoryComponent::GetCurrentWeaponRemainingAmmo() const
 	return FText::FromString("Err");
 }
 
-// Passing player inputs to WeaponBase
-void UInventoryComponent::StopFire()
-{
-	if (CurrentWeapon)
-	{
-		if (IsNetMode(NM_DedicatedServer) || IsNetMode(NM_ListenServer))
-		{
-			CurrentWeapon->StopFire();
-		}
-		else
-		{
-			CurrentWeapon->Server_StopFire();
-		}
-	}
-}
-
 void UInventoryComponent::Inspect()
 {
 	if (CurrentWeapon)
@@ -354,18 +336,12 @@ void UInventoryComponent::Inspect()
 
 void UInventoryComponent::UnequipReturn()
 {
-	CurrentWeapon->Multi_SwapWeaponAnim();
+	// CurrentWeapon->Multi_SwapWeaponAnim();
 	SwapWeapon(TargetWeaponSlot);
 }
 
 void UInventoryComponent::SetupInputComponent(UEnhancedInputComponent *PlayerInputComponent)
 {
-	if (FiringAction)
-	{
-		// Firing
-		PlayerInputComponent->BindAction(FiringAction, ETriggerEvent::Completed, this, &UInventoryComponent::StopFire);
-	}
-
 	if (PrimaryWeaponAction)
 	{
 		// Switching to the primary weapon

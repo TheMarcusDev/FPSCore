@@ -738,12 +738,6 @@ public:
 	bool Client_StopFire_Validate();
 	void Client_StopFire_Implementation();
 
-	/** RPC of the stop fire function */
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_StopFire();
-	bool Server_StopFire_Validate();
-	void Server_StopFire_Implementation();
-
 	/** The main skeletal mesh - holds the weapon model */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent *MeshComp;
